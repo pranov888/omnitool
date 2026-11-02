@@ -1,14 +1,16 @@
 mod crypto;
+mod json_tool;
 mod qr;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use colored::*;
+use std::fs;
 
 #[derive(Parser)]
 #[command(
     name = "omnitool",
     author = "pranov888",
-    version = "0.1.0",
+    version = "0.2.0",
     about = "⚡ All-in-one developer Swiss-Army knife CLI written in Rust",
     long_about = "Omnitool provides everyday developer utilities (crypto, QR codes, JSON tools, system info, and network diagnostics) in a single high-performance binary."
 )]
@@ -23,6 +25,8 @@ enum Commands {
     Crypto(CryptoArgs),
     /// 📱 Generate scannable QR codes directly in your terminal
     Qr(QrArgs),
+    /// 📄 JSON data processing (format, minify, validate)
+    Json(JsonArgs),
 }
 
 #[derive(Args)]
@@ -75,6 +79,39 @@ struct QrArgs {
     content: String,
 }
 
+#[derive(Args)]
+struct JsonArgs {
+    #[command(subcommand)]
+    action: JsonSubcommand,
+}
+
+#[derive(Subcommand)]
+enum JsonSubcommand {
+    /// Format and prettify JSON string or file
+    Format {
+        /// JSON string or file path
+        target: String,
+    },
+    /// Minify JSON string or file
+    Minify {
+        /// JSON string or file path
+        target: String,
+    },
+    /// Validate JSON syntax and inspect structure
+    Validate {
+        /// JSON string or file path
+        target: String,
+    },
+}
+
+fn resolve_input_or_file(target: &str) -> String {
+    if let Ok(content) = fs::read_to_string(target) {
+        content
+    } else {
+        target.to_string()
+    }
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -124,6 +161,38 @@ fn main() {
             Err(e) => {
                 eprintln!("{} Failed to render QR code: {}", "Error:".bold().red(), e);
                 std::process::exit(1);
+            }
+        },
+        Commands::Json(json_args) => match json_args.action {
+            JsonSubcommand::Format { target } => {
+                let payload = resolve_input_or_file(&target);
+                match json_tool::format_json(&payload) {
+                    Ok(formatted) => println!("{formatted}"),
+                    Err(e) => {
+                        eprintln!("{} {e}", "Error:".bold().red());
+                        std::process::exit(1);
+                    }
+                }
+            }
+            JsonSubcommand::Minify { target } => {
+                let payload = resolve_input_or_file(&target);
+                match json_tool::minify_json(&payload) {
+                    Ok(minified) => println!("{minified}"),
+                    Err(e) => {
+                        eprintln!("{} {e}", "Error:".bold().red());
+                        std::process::exit(1);
+                    }
+                }
+            }
+            JsonSubcommand::Validate { target } => {
+                let payload = resolve_input_or_file(&target);
+                match json_tool::validate_json(&payload) {
+                    Ok(status) => println!("{} {status}", "Success:".bold().green()),
+                    Err(e) => {
+                        eprintln!("{} {e}", "Error:".bold().red());
+                        std::process::exit(1);
+                    }
+                }
             }
         },
     }

@@ -1,4 +1,4 @@
-# ⚡ omnitool
+# omnitool
 
 [![CI](https://github.com/pranov888/omnitool/actions/workflows/ci.yml/badge.svg)](https://github.com/pranov888/omnitool/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -7,34 +7,34 @@
 
 > The all-in-one developer Swiss-Army knife CLI written in Rust. Fast, zero-dependency runtime, single static binary.
 
-Instead of installing a dozen disconnected utilities, `omnitool` bundles everyday developer workflows into a lightning-fast terminal tool.
+Instead of installing a dozen disconnected utilities, `omnitool` bundles everyday developer workflows into a fast terminal tool.
 
 ---
 
-## 🚀 Features
+## Features
 
-- 🔐 **Crypto & Security**:
+- **Crypto and Security**:
   - Hash computation (`SHA-256`, `MD5`)
-  - Base64 encoding and decoding
+  - Base64 encoding and decoding (standard, URL-safe, unpadded)
   - UUIDv4 generator
   - High-entropy secure password generation
-- 📱 **Terminal QR Code**:
+- **Terminal QR Code**:
   - Instant ASCII/UTF-8 scannable QR generation for links, text, and keys
-- 📄 **Data & JSON Tools**:
+- **Data and JSON Tools**:
   - Pretty formatting with syntax verification
   - JSON minification
   - Structural validation for arrays and objects
-- 💻 **System & Environment Telemetry**:
+- **System and Environment Telemetry**:
   - Host OS, kernel version, and hardware stats
   - Multi-core CPU detection and real-time RAM/Swap metrics
   - Mounted disk partitions and storage space inspection
-- 🌐 **Network Diagnostics**:
+- **Network Diagnostics**:
   - Network interface activity telemetry (RX/TX counters)
   - Ultra-fast TCP port connectivity and latency probing (`ping`)
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### From Source
 ```bash
@@ -50,7 +50,7 @@ cargo run -- --help
 
 ---
 
-## 🛠️ Usage Examples
+## Usage Examples
 
 ### 1. Cryptographic Hashes
 ```bash
@@ -61,7 +61,7 @@ omnitool crypto hash "my-secret-payload"
 omnitool crypto hash --algorithm md5 "my-secret-payload"
 ```
 
-### 2. Base64 Encoding & Decoding
+### 2. Base64 Encoding and Decoding
 ```bash
 # Encode
 omnitool crypto b64-encode "developer-token-123"
@@ -70,7 +70,7 @@ omnitool crypto b64-encode "developer-token-123"
 omnitool crypto b64-decode "ZGV2ZWxvcGVyLXRva2VuLTEyMw=="
 ```
 
-### 3. Generate UUID & Passwords
+### 3. Generate UUID and Passwords
 ```bash
 # Generate UUIDv4
 omnitool crypto uuid
@@ -85,7 +85,7 @@ omnitool crypto pass --length 24 --symbols
 omnitool qr "https://github.com/pranov888/omnitool"
 ```
 
-### 5. JSON Formatting & Validation
+### 5. JSON Formatting and Validation
 ```bash
 # Format and prettify JSON string or file
 omnitool json format '{"service":"api","status":"ok","latency_ms":14}'
@@ -97,13 +97,13 @@ omnitool json minify '{\n  "status": "ok"\n}'
 omnitool json validate '{"items":[1,2,3]}'
 ```
 
-### 6. System & Hardware Telemetry
+### 6. System and Hardware Telemetry
 ```bash
 # Print host info, CPU model, RAM usage, and disk space
 omnitool sys
 ```
 
-### 7. Network Probes & Latency
+### 7. Network Probes and Latency
 ```bash
 # Inspect network interfaces
 omnitool net interfaces
@@ -114,14 +114,14 @@ omnitool net ping github.com --port 443
 
 ---
 
-## 🗺️ Roadmap & Changelog
+## Roadmap and Changelog
 
-### v0.3.0 - Hardware & Network Diagnostics
+### v0.3.0 - Hardware and Network Diagnostics
 - Added `sys` telemetry for hardware, memory, and mounted disk metrics
 - Added `net` module with interface telemetry and low-latency TCP ping probing
 - Full cross-platform support and unit test coverage
 
-### v0.2.0 - JSON Tooling & Formatters
+### v0.2.0 - JSON Tooling and Formatters
 - Added `json` subcommand with `format`, `minify`, and `validate` actions
 - Support for inline JSON payloads or direct file path inputs
 - Unit test coverage for serialization and structural validation
@@ -134,12 +134,12 @@ omnitool net ping github.com --port 443
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/pranov888/omnitool/issues).
+Contributions, issues, and feature requests are welcome. Feel free to check the [issues page](https://github.com/pranov888/omnitool/issues).
 
 ---
 
-## 📄 License
+## License
 
 Distributed under the [MIT](LICENSE) License.

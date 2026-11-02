@@ -12,7 +12,7 @@ use std::fs;
     name = "omnitool",
     author = "pranov888",
     version = "0.3.0",
-    about = "⚡ All-in-one developer Swiss-Army knife CLI written in Rust",
+    about = "All-in-one developer Swiss-Army knife CLI written in Rust",
     long_about = "Omnitool provides everyday developer utilities (crypto, QR codes, JSON tools, system info, and network diagnostics) in a single high-performance binary."
 )]
 struct Cli {
@@ -22,15 +22,15 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// 🔐 Cryptographic helpers (hashes, base64, uuid, password generation)
+    /// Cryptographic helpers (hashes, base64, uuid, password generation)
     Crypto(CryptoArgs),
-    /// 📱 Generate scannable QR codes directly in your terminal
+    /// Generate scannable QR codes directly in your terminal
     Qr(QrArgs),
-    /// 📄 JSON data processing (format, minify, validate)
+    /// JSON data processing (format, minify, validate)
     Json(JsonArgs),
-    /// 💻 System hardware and operating system telemetry
+    /// System hardware and operating system telemetry
     Sys,
-    /// 🌐 Network diagnostics and TCP connectivity latency
+    /// Network diagnostics and TCP connectivity latency
     Net(NetArgs),
 }
 
@@ -222,7 +222,7 @@ fn main() {
         },
         Commands::Sys => {
             let sys = telemetry::collect_system_overview();
-            println!("{}", "💻 System Hardware & Environment Overview".bold().cyan());
+            println!("{}", "System Hardware & Environment Overview".bold().cyan());
             println!("  {:<15} {}", "Host:".bold(), sys.host_name);
             println!(
                 "  {:<15} {} (version {})",
@@ -254,7 +254,7 @@ fn main() {
         Commands::Net(net_args) => match net_args.action {
             NetSubcommand::Interfaces => {
                 let interfaces = telemetry::collect_network_interfaces();
-                println!("{}", "🌐 Active Network Interfaces".bold().cyan());
+                println!("{}", "Active Network Interfaces".bold().cyan());
                 for iface in interfaces {
                     println!(
                         "  {:<15} RX: {:.2} MB | TX: {:.2} MB",

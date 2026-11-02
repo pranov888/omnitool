@@ -162,11 +162,19 @@ omnitool net interfaces
 
 # Test TCP latency to host (default port 443)
 omnitool net ping github.com --port 443
+
+# Resolve DNS and measure resolution time
+omnitool net dns github.com
 ```
 
 ---
 
 ## Roadmap and Changelog
+
+### v0.7.0 - Network DNS Diagnostics
+- Added `net dns` command for multi-address resolution and lookup latency measurement
+- Cross-platform IPv4 and IPv6 resolution telemetry
+- Expanded test suite to 31 tests
 
 ### v0.6.0 - Text Analytics and Casing Utilities
 - Added `text` module for line, word, character, and byte telemetry

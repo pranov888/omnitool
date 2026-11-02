@@ -21,10 +21,31 @@ pub fn base64_encode(input: &str) -> String {
 }
 
 pub fn base64_decode(input: &str) -> Result<String, String> {
-    match BASE64_STANDARD.decode(input.trim()) {
-        Ok(bytes) => String::from_utf8(bytes).map_err(|e| format!("Invalid UTF-8 output: {e}")),
-        Err(e) => Err(format!("Base64 decoding failed: {e}")),
+    let trimmed = input.trim();
+
+    // 1. Try standard base64 directly
+    if let Ok(bytes) = BASE64_STANDARD.decode(trimmed) {
+        return String::from_utf8(bytes).map_err(|e| format!("Invalid UTF-8 output: {e}"));
     }
+
+    // 2. Try URL-safe base64 directly
+    if let Ok(bytes) = BASE64_URL_SAFE.decode(trimmed) {
+        return String::from_utf8(bytes).map_err(|e| format!("Invalid UTF-8 output: {e}"));
+    }
+
+    // 3. Fallback for unpadded inputs (common in JWTs / URL query params)
+    let padded = match trimmed.len() % 4 {
+        2 => format!("{trimmed}=="),
+        3 => format!("{trimmed}="),
+        _ => trimmed.to_string(),
+    };
+
+    let bytes = BASE64_STANDARD
+        .decode(&padded)
+        .or_else(|_| BASE64_URL_SAFE.decode(&padded))
+        .map_err(|e| format!("Base64 decoding failed: {e}"))?;
+
+    String::from_utf8(bytes).map_err(|e| format!("Invalid UTF-8 output: {e}"))
 }
 
 pub fn generate_uuid() -> String {
@@ -78,6 +99,14 @@ mod tests {
         let encoded = base64_encode(original);
         let decoded = base64_decode(&encoded).expect("Decode should succeed");
         assert_eq!(original, decoded);
+    }
+
+    #[test]
+    fn test_base64_url_safe_and_unpadded() {
+        // "subjects?_d=1" encoded in url-safe without padding
+        let input = "c3ViamVjdHM_X2Q9MQ";
+        let decoded = base64_decode(input).expect("Should decode URL-safe unpadded string");
+        assert_eq!(decoded, "subjects?_d=1");
     }
 
     #[test]

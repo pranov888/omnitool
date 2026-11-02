@@ -3,6 +3,7 @@ mod crypto;
 mod json_tool;
 mod qr;
 mod telemetry;
+mod text_tool;
 mod time_tool;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
@@ -14,7 +15,7 @@ use std::io::{self, Read};
 #[command(
     name = "omnitool",
     author = "pranov888",
-    version = "0.5.0",
+    version = "0.6.0",
     about = "All-in-one developer Swiss-Army knife CLI written in Rust",
     long_about = "Omnitool provides everyday developer utilities (crypto, QR codes, JSON tools, encoders, system info, and network diagnostics) in a single high-performance binary."
 )]
@@ -31,6 +32,8 @@ enum Commands {
     Encode(EncodeArgs),
     /// UNIX epoch timestamps and ISO 8601 UTC date-time conversions
     Time(TimeArgs),
+    /// Text analysis, counting, and casing transformations
+    Text(TextArgs),
     /// Generate scannable QR codes directly in your terminal
     Qr(QrArgs),
     /// JSON data processing (format, minify, validate)
@@ -135,6 +138,38 @@ enum TimeSubcommand {
         /// ISO 8601 date string
         iso: String,
     },
+}
+
+#[derive(Args)]
+struct TextArgs {
+    #[command(subcommand)]
+    action: TextSubcommand,
+}
+
+#[derive(Subcommand)]
+enum TextSubcommand {
+    /// Count lines, words, characters, and byte size of string or file
+    Count {
+        /// Text string, file path, or '-' for stdin
+        target: String,
+    },
+    /// Convert text case style (snake, camel, kebab, upper, lower)
+    Case {
+        /// Target case formatting style
+        #[arg(short, long, value_enum)]
+        style: TextCaseStyle,
+        /// Input text to transform
+        text: String,
+    },
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
+enum TextCaseStyle {
+    Snake,
+    Camel,
+    Kebab,
+    Upper,
+    Lower,
 }
 
 #[derive(Args)]
@@ -295,6 +330,36 @@ fn main() {
                     std::process::exit(1);
                 }
             },
+        },
+        Commands::Text(text_args) => match text_args.action {
+            TextSubcommand::Count { target } => {
+                let payload = resolve_input_or_file(&target);
+                let stats = text_tool::analyze_text(&payload);
+                println!("{}", "Text Metrics & Content Statistics".bold().cyan());
+                println!("  {:<15} {}", "Lines:".bold(), stats.lines.to_string().green());
+                println!("  {:<15} {}", "Words:".bold(), stats.words.to_string().green());
+                println!(
+                    "  {:<15} {}",
+                    "Characters:".bold(),
+                    stats.characters.to_string().green()
+                );
+                println!(
+                    "  {:<15} {} bytes",
+                    "Byte Size:".bold(),
+                    stats.bytes.to_string().green()
+                );
+            }
+            TextSubcommand::Case { style, text } => {
+                let style_enum = match style {
+                    TextCaseStyle::Snake => text_tool::CaseStyle::Snake,
+                    TextCaseStyle::Camel => text_tool::CaseStyle::Camel,
+                    TextCaseStyle::Kebab => text_tool::CaseStyle::Kebab,
+                    TextCaseStyle::Upper => text_tool::CaseStyle::Upper,
+                    TextCaseStyle::Lower => text_tool::CaseStyle::Lower,
+                };
+                let transformed = text_tool::convert_case(&text, style_enum);
+                println!("{} {}", "Formatted Text:".bold().cyan(), transformed.green().bold());
+            }
         },
         Commands::Qr(qr_args) => match qr::generate_terminal_qr(&qr_args.content) {
             Ok(qr_art) => {

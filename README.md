@@ -20,7 +20,10 @@ Instead of installing a dozen disconnected utilities, `omnitool` bundles everyda
   - High-entropy secure password generation
 - 📱 **Terminal QR Code**:
   - Instant ASCII/UTF-8 scannable QR generation for links, text, and keys
-- 📄 **Data & JSON Tools** *(Coming in v0.2)*
+- 📄 **Data & JSON Tools**:
+  - Pretty formatting with syntax verification
+  - JSON minification
+  - Structural validation for arrays and objects
 - 💻 **System & Network Telemetry** *(Coming in v0.3)*
 
 ---
@@ -76,9 +79,26 @@ omnitool crypto pass --length 24 --symbols
 omnitool qr "https://github.com/pranov888/omnitool"
 ```
 
+### 5. JSON Formatting & Validation
+```bash
+# Format and prettify JSON string or file
+omnitool json format '{"service":"api","status":"ok","latency_ms":14}'
+
+# Minify JSON
+omnitool json minify '{\n  "status": "ok"\n}'
+
+# Validate JSON structure
+omnitool json validate '{"items":[1,2,3]}'
+```
+
 ---
 
 ## 🗺️ Roadmap & Changelog
+
+### v0.2.0 - JSON Tooling & Formatters
+- Added `json` subcommand with `format`, `minify`, and `validate` actions
+- Support for inline JSON payloads or direct file path inputs
+- Unit test coverage for serialization and structural validation
 
 ### v0.1.0 - Initial Release
 - Core CLI framework powered by `clap`

@@ -22,6 +22,10 @@ Instead of installing a dozen disconnected utilities, `omnitool` bundles everyda
   - URL percent-encoding and decoding (RFC 3986 with space/plus handling)
   - Hexadecimal encoding and decoding with ASCII/UTF-8 validation
   - Standard input (`-`) pipeline streaming support
+- **Time and Timestamp Telemetry**:
+  - High-precision UNIX epoch timestamps (seconds and milliseconds)
+  - ISO 8601 UTC date-time formatting and conversion
+  - Strict calendar and leap-year validation
 - **Terminal QR Code**:
   - Instant ASCII/UTF-8 scannable QR generation for links, text, and keys
 - **Data and JSON Tools**:
@@ -98,7 +102,19 @@ omnitool encode hex-encode "developer toolkit"
 omnitool encode hex-decode "646576656c6f70657220746f6f6c6b6974"
 ```
 
-### 5. Terminal QR Codes
+### 5. Time and Timestamp Operations
+```bash
+# Current epoch seconds, milliseconds, and ISO 8601 UTC
+omnitool time now
+
+# Convert epoch to ISO 8601 UTC
+omnitool time to-iso 1700000000
+
+# Parse ISO 8601 UTC to Unix epoch seconds
+omnitool time to-epoch 2023-11-14T22:13:20Z
+```
+
+### 6. Terminal QR Codes
 ```bash
 # Generate scannable QR in terminal
 omnitool qr "https://github.com/pranov888/omnitool"
@@ -134,6 +150,11 @@ omnitool net ping github.com --port 443
 ---
 
 ## Roadmap and Changelog
+
+### v0.5.0 - Time and Timestamp Telemetry
+- Added `time` module with high-precision UNIX epoch timestamps
+- Implemented bidirectional ISO 8601 UTC formatting and parsing
+- Expanded unit test coverage to 24 tests
 
 ### v0.4.0 - Data Codecs, Dual-Stack Probing, and Stdin Pipeline Support
 - Added `encode` module for URL percent-encoding/decoding and hexadecimal encoding/decoding

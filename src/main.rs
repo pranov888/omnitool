@@ -3,6 +3,7 @@ mod crypto;
 mod json_tool;
 mod qr;
 mod telemetry;
+mod time_tool;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use colored::*;
@@ -13,7 +14,7 @@ use std::io::{self, Read};
 #[command(
     name = "omnitool",
     author = "pranov888",
-    version = "0.4.0",
+    version = "0.5.0",
     about = "All-in-one developer Swiss-Army knife CLI written in Rust",
     long_about = "Omnitool provides everyday developer utilities (crypto, QR codes, JSON tools, encoders, system info, and network diagnostics) in a single high-performance binary."
 )]
@@ -28,6 +29,8 @@ enum Commands {
     Crypto(CryptoArgs),
     /// URL and Hex data encoding and decoding
     Encode(EncodeArgs),
+    /// UNIX epoch timestamps and ISO 8601 UTC date-time conversions
+    Time(TimeArgs),
     /// Generate scannable QR codes directly in your terminal
     Qr(QrArgs),
     /// JSON data processing (format, minify, validate)
@@ -109,6 +112,28 @@ enum EncodeSubcommand {
     HexDecode {
         /// Hexadecimal string to decode
         hex: String,
+    },
+}
+
+#[derive(Args)]
+struct TimeArgs {
+    #[command(subcommand)]
+    action: TimeSubcommand,
+}
+
+#[derive(Subcommand)]
+enum TimeSubcommand {
+    /// Show current UNIX epoch in seconds and milliseconds with UTC timestamp
+    Now,
+    /// Convert a UNIX epoch timestamp (seconds or milliseconds) to ISO 8601 UTC
+    ToIso {
+        /// Epoch timestamp number
+        epoch: i64,
+    },
+    /// Parse an ISO 8601 date-time string (e.g. 2026-11-02T12:00:00Z) to UNIX epoch
+    ToEpoch {
+        /// ISO 8601 date string
+        iso: String,
     },
 }
 
@@ -236,6 +261,34 @@ fn main() {
             EncodeSubcommand::HexDecode { hex } => match codec::hex_decode_to_string(&hex) {
                 Ok(decoded) => {
                     println!("{} {}", "Hex Decoded:".bold().cyan(), decoded.green());
+                }
+                Err(err) => {
+                    eprintln!("{} {}", "Error:".bold().red(), err);
+                    std::process::exit(1);
+                }
+            },
+        },
+        Commands::Time(time_args) => match time_args.action {
+            TimeSubcommand::Now => {
+                let secs = time_tool::current_epoch_secs();
+                let millis = time_tool::current_epoch_millis();
+                let iso = time_tool::epoch_to_iso8601(secs as i64);
+                println!("{}", "Current UTC Time Telemetry".bold().cyan());
+                println!("  {:<15} {}", "Epoch (s):".bold(), secs.to_string().green());
+                println!(
+                    "  {:<15} {}",
+                    "Epoch (ms):".bold(),
+                    millis.to_string().green()
+                );
+                println!("  {:<15} {}", "ISO 8601:".bold(), iso.bright_yellow().bold());
+            }
+            TimeSubcommand::ToIso { epoch } => {
+                let iso = time_tool::epoch_to_iso8601(epoch);
+                println!("{} {}", "ISO 8601 UTC:".bold().cyan(), iso.green().bold());
+            }
+            TimeSubcommand::ToEpoch { iso } => match time_tool::iso8601_to_epoch(&iso) {
+                Ok(epoch) => {
+                    println!("{} {}", "Unix Epoch (s):".bold().cyan(), epoch.to_string().green().bold());
                 }
                 Err(err) => {
                     eprintln!("{} {}", "Error:".bold().red(), err);

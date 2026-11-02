@@ -111,6 +111,32 @@ pub fn probe_tcp_latency(host: &str, port: u16) -> Result<Duration, String> {
     Err(format!("Failed to connect to {target}: {err_msg}"))
 }
 
+pub struct DnsLookupResult {
+    pub host: String,
+    pub addresses: Vec<String>,
+    pub lookup_duration: Duration,
+}
+
+pub fn resolve_dns(host: &str) -> Result<DnsLookupResult, String> {
+    let start = Instant::now();
+    let target = format!("{host}:80");
+    let addrs: Vec<_> = target
+        .to_socket_addrs()
+        .map_err(|e| format!("Failed to resolve DNS for '{host}': {e}"))?
+        .map(|s| s.ip().to_string())
+        .collect();
+
+    if addrs.is_empty() {
+        return Err(format!("No IP addresses found for '{host}'"));
+    }
+
+    Ok(DnsLookupResult {
+        host: host.to_string(),
+        addresses: addrs,
+        lookup_duration: start.elapsed(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -133,5 +159,12 @@ mod tests {
     fn test_probe_tcp_invalid_host() {
         let res = probe_tcp_latency("non-existent-host.invalid-domain-test", 80);
         assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_resolve_dns_loopback() {
+        let res = resolve_dns("localhost").expect("localhost resolves");
+        assert!(!res.addresses.is_empty());
+        assert!(res.addresses.contains(&"127.0.0.1".to_string()) || res.addresses.contains(&"::1".to_string()));
     }
 }

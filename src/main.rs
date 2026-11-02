@@ -15,7 +15,7 @@ use std::io::{self, Read};
 #[command(
     name = "omnitool",
     author = "pranov888",
-    version = "0.6.0",
+    version = "0.7.0",
     about = "All-in-one developer Swiss-Army knife CLI written in Rust",
     long_about = "Omnitool provides everyday developer utilities (crypto, QR codes, JSON tools, encoders, system info, and network diagnostics) in a single high-performance binary."
 )]
@@ -220,6 +220,11 @@ enum NetSubcommand {
         /// Port number to connect to
         #[arg(short, long, default_value_t = 443)]
         port: u16,
+    },
+    /// Perform DNS lookup resolution for a hostname
+    Dns {
+        /// Hostname to resolve (e.g. github.com, rust-lang.org)
+        host: String,
     },
 }
 
@@ -464,6 +469,27 @@ fn main() {
                             "Success:".bold().green(),
                             latency.as_secs_f64() * 1000.0
                         );
+                    }
+                    Err(e) => {
+                        eprintln!("{} {e}", "Error:".bold().red());
+                        std::process::exit(1);
+                    }
+                }
+            }
+            NetSubcommand::Dns { host } => {
+                println!("{} {}...", "Resolving DNS for".cyan(), host.bold());
+                match telemetry::resolve_dns(&host) {
+                    Ok(res) => {
+                        println!(
+                            "{} Resolved in {:.2} ms",
+                            "Success:".bold().green(),
+                            res.lookup_duration.as_secs_f64() * 1000.0
+                        );
+                        println!("  {:<15} {}", "Host:".bold(), res.host.cyan());
+                        println!("{}", "Resolved IP Addresses:".bold().cyan());
+                        for ip in res.addresses {
+                            println!("  - {}", ip.green());
+                        }
                     }
                     Err(e) => {
                         eprintln!("{} {e}", "Error:".bold().red());

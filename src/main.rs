@@ -1,3 +1,4 @@
+mod codec;
 mod crypto;
 mod json_tool;
 mod qr;
@@ -6,14 +7,15 @@ mod telemetry;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use colored::*;
 use std::fs;
+use std::io::{self, Read};
 
 #[derive(Parser)]
 #[command(
     name = "omnitool",
     author = "pranov888",
-    version = "0.3.0",
+    version = "0.4.0",
     about = "All-in-one developer Swiss-Army knife CLI written in Rust",
-    long_about = "Omnitool provides everyday developer utilities (crypto, QR codes, JSON tools, system info, and network diagnostics) in a single high-performance binary."
+    long_about = "Omnitool provides everyday developer utilities (crypto, QR codes, JSON tools, encoders, system info, and network diagnostics) in a single high-performance binary."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -24,6 +26,8 @@ struct Cli {
 enum Commands {
     /// Cryptographic helpers (hashes, base64, uuid, password generation)
     Crypto(CryptoArgs),
+    /// URL and Hex data encoding and decoding
+    Encode(EncodeArgs),
     /// Generate scannable QR codes directly in your terminal
     Qr(QrArgs),
     /// JSON data processing (format, minify, validate)
@@ -79,6 +83,36 @@ enum HashAlgorithm {
 }
 
 #[derive(Args)]
+struct EncodeArgs {
+    #[command(subcommand)]
+    action: EncodeSubcommand,
+}
+
+#[derive(Subcommand)]
+enum EncodeSubcommand {
+    /// URL percent-encode an ASCII or UTF-8 string
+    UrlEncode {
+        /// Text to URL-encode
+        text: String,
+    },
+    /// Decode a percent-encoded URL string
+    UrlDecode {
+        /// URL encoded text to decode
+        encoded: String,
+    },
+    /// Hex-encode an input string into lowercase hexadecimal
+    HexEncode {
+        /// Text to hex-encode
+        text: String,
+    },
+    /// Hex-decode a hexadecimal string back to UTF-8
+    HexDecode {
+        /// Hexadecimal string to decode
+        hex: String,
+    },
+}
+
+#[derive(Args)]
 struct QrArgs {
     /// URL or text content to encode into a terminal QR code
     content: String,
@@ -130,6 +164,12 @@ enum NetSubcommand {
 }
 
 fn resolve_input_or_file(target: &str) -> String {
+    if target == "-" {
+        let mut buffer = String::new();
+        if io::stdin().read_to_string(&mut buffer).is_ok() {
+            return buffer;
+        }
+    }
     if let Ok(content) = fs::read_to_string(target) {
         content
     } else {
@@ -174,6 +214,34 @@ fn main() {
                     password.bright_green().bold()
                 );
             }
+        },
+        Commands::Encode(encode_args) => match encode_args.action {
+            EncodeSubcommand::UrlEncode { text } => {
+                let encoded = codec::url_encode(&text);
+                println!("{} {}", "URL Encoded:".bold().cyan(), encoded.green());
+            }
+            EncodeSubcommand::UrlDecode { encoded } => match codec::url_decode(&encoded) {
+                Ok(decoded) => {
+                    println!("{} {}", "URL Decoded:".bold().cyan(), decoded.green());
+                }
+                Err(err) => {
+                    eprintln!("{} {}", "Error:".bold().red(), err);
+                    std::process::exit(1);
+                }
+            },
+            EncodeSubcommand::HexEncode { text } => {
+                let hex = codec::hex_encode(text.as_bytes());
+                println!("{} {}", "Hex Encoded:".bold().cyan(), hex.green());
+            }
+            EncodeSubcommand::HexDecode { hex } => match codec::hex_decode_to_string(&hex) {
+                Ok(decoded) => {
+                    println!("{} {}", "Hex Decoded:".bold().cyan(), decoded.green());
+                }
+                Err(err) => {
+                    eprintln!("{} {}", "Error:".bold().red(), err);
+                    std::process::exit(1);
+                }
+            },
         },
         Commands::Qr(qr_args) => match qr::generate_terminal_qr(&qr_args.content) {
             Ok(qr_art) => {

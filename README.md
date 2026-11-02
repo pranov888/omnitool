@@ -24,7 +24,13 @@ Instead of installing a dozen disconnected utilities, `omnitool` bundles everyda
   - Pretty formatting with syntax verification
   - JSON minification
   - Structural validation for arrays and objects
-- 💻 **System & Network Telemetry** *(Coming in v0.3)*
+- 💻 **System & Environment Telemetry**:
+  - Host OS, kernel version, and hardware stats
+  - Multi-core CPU detection and real-time RAM/Swap metrics
+  - Mounted disk partitions and storage space inspection
+- 🌐 **Network Diagnostics**:
+  - Network interface activity telemetry (RX/TX counters)
+  - Ultra-fast TCP port connectivity and latency probing (`ping`)
 
 ---
 
@@ -60,7 +66,7 @@ omnitool crypto hash --algorithm md5 "my-secret-payload"
 # Encode
 omnitool crypto b64-encode "developer-token-123"
 
-# Decode
+# Decode (handles standard, URL-safe, and unpadded strings)
 omnitool crypto b64-decode "ZGV2ZWxvcGVyLXRva2VuLTEyMw=="
 ```
 
@@ -91,9 +97,29 @@ omnitool json minify '{\n  "status": "ok"\n}'
 omnitool json validate '{"items":[1,2,3]}'
 ```
 
+### 6. System & Hardware Telemetry
+```bash
+# Print host info, CPU model, RAM usage, and disk space
+omnitool sys
+```
+
+### 7. Network Probes & Latency
+```bash
+# Inspect network interfaces
+omnitool net interfaces
+
+# Test TCP latency to host (default port 443)
+omnitool net ping github.com --port 443
+```
+
 ---
 
 ## 🗺️ Roadmap & Changelog
+
+### v0.3.0 - Hardware & Network Diagnostics
+- Added `sys` telemetry for hardware, memory, and mounted disk metrics
+- Added `net` module with interface telemetry and low-latency TCP ping probing
+- Full cross-platform support and unit test coverage
 
 ### v0.2.0 - JSON Tooling & Formatters
 - Added `json` subcommand with `format`, `minify`, and `validate` actions

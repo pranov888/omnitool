@@ -1,6 +1,7 @@
 mod crypto;
 mod json_tool;
 mod qr;
+mod telemetry;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use colored::*;
@@ -10,7 +11,7 @@ use std::fs;
 #[command(
     name = "omnitool",
     author = "pranov888",
-    version = "0.2.0",
+    version = "0.3.0",
     about = "⚡ All-in-one developer Swiss-Army knife CLI written in Rust",
     long_about = "Omnitool provides everyday developer utilities (crypto, QR codes, JSON tools, system info, and network diagnostics) in a single high-performance binary."
 )]
@@ -27,6 +28,10 @@ enum Commands {
     Qr(QrArgs),
     /// 📄 JSON data processing (format, minify, validate)
     Json(JsonArgs),
+    /// 💻 System hardware and operating system telemetry
+    Sys,
+    /// 🌐 Network diagnostics and TCP connectivity latency
+    Net(NetArgs),
 }
 
 #[derive(Args)]
@@ -101,6 +106,26 @@ enum JsonSubcommand {
     Validate {
         /// JSON string or file path
         target: String,
+    },
+}
+
+#[derive(Args)]
+struct NetArgs {
+    #[command(subcommand)]
+    action: NetSubcommand,
+}
+
+#[derive(Subcommand)]
+enum NetSubcommand {
+    /// List network interfaces and activity counters
+    Interfaces,
+    /// Probe TCP connection latency to a host and port
+    Ping {
+        /// Host to probe (e.g. github.com, 1.1.1.1)
+        host: String,
+        /// Port number to connect to
+        #[arg(short, long, default_value_t = 443)]
+        port: u16,
     },
 }
 
@@ -188,6 +213,72 @@ fn main() {
                 let payload = resolve_input_or_file(&target);
                 match json_tool::validate_json(&payload) {
                     Ok(status) => println!("{} {status}", "Success:".bold().green()),
+                    Err(e) => {
+                        eprintln!("{} {e}", "Error:".bold().red());
+                        std::process::exit(1);
+                    }
+                }
+            }
+        },
+        Commands::Sys => {
+            let sys = telemetry::collect_system_overview();
+            println!("{}", "💻 System Hardware & Environment Overview".bold().cyan());
+            println!("  {:<15} {}", "Host:".bold(), sys.host_name);
+            println!(
+                "  {:<15} {} (version {})",
+                "OS:".bold(),
+                sys.os_name,
+                sys.os_version
+            );
+            println!(
+                "  {:<15} {} ({} cores)",
+                "CPU:".bold(),
+                sys.cpu_brand,
+                sys.cpu_count
+            );
+            println!(
+                "  {:<15} Used: {} MB / Total: {} MB (Free: {} MB)",
+                "Memory:".bold(),
+                sys.used_memory_mb,
+                sys.total_memory_mb,
+                sys.free_memory_mb
+            );
+            println!("{}", "Mounted Storage:".bold().cyan());
+            for d in sys.disks {
+                println!(
+                    "  - {:<18} Available: {:.1} GB / Total: {:.1} GB ({})",
+                    d.mount_point, d.available_space_gb, d.total_space_gb, d.file_system
+                );
+            }
+        }
+        Commands::Net(net_args) => match net_args.action {
+            NetSubcommand::Interfaces => {
+                let interfaces = telemetry::collect_network_interfaces();
+                println!("{}", "🌐 Active Network Interfaces".bold().cyan());
+                for iface in interfaces {
+                    println!(
+                        "  {:<15} RX: {:.2} MB | TX: {:.2} MB",
+                        iface.name.bold(),
+                        (iface.received_bytes as f64) / (1024.0 * 1024.0),
+                        (iface.transmitted_bytes as f64) / (1024.0 * 1024.0)
+                    );
+                }
+            }
+            NetSubcommand::Ping { host, port } => {
+                println!(
+                    "{} {}:{}...",
+                    "Probing TCP connectivity to".cyan(),
+                    host.bold(),
+                    port
+                );
+                match telemetry::probe_tcp_latency(&host, port) {
+                    Ok(latency) => {
+                        println!(
+                            "{} Connected in {:.2} ms",
+                            "Success:".bold().green(),
+                            latency.as_secs_f64() * 1000.0
+                        );
+                    }
                     Err(e) => {
                         eprintln!("{} {e}", "Error:".bold().red());
                         std::process::exit(1);

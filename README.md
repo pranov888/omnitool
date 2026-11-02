@@ -26,6 +26,10 @@ Instead of installing a dozen disconnected utilities, `omnitool` bundles everyda
   - High-precision UNIX epoch timestamps (seconds and milliseconds)
   - ISO 8601 UTC date-time formatting and conversion
   - Strict calendar and leap-year validation
+- **Text Analytics and Transformations**:
+  - Content telemetry (line count, word count, character count, byte size)
+  - Case formatting converters (snake_case, camelCase, kebab-case, UPPER_CASE, lower case)
+  - Full support for files and standard input (`-`)
 - **Terminal QR Code**:
   - Instant ASCII/UTF-8 scannable QR generation for links, text, and keys
 - **Data and JSON Tools**:
@@ -114,13 +118,26 @@ omnitool time to-iso 1700000000
 omnitool time to-epoch 2023-11-14T22:13:20Z
 ```
 
-### 6. Terminal QR Codes
+### 6. Text Analytics and Case Conversion
+```bash
+# Inspect line, word, and character metrics
+omnitool text count "Quick brown fox jumps\nover the lazy dog"
+
+# Stream input from pipe into text analyzer
+cat document.txt | omnitool text count -
+
+# Convert case style (snake, camel, kebab, upper)
+omnitool text case --style snake "OmniToolCli"
+omnitool text case --style camel "omni_tool_cli"
+```
+
+### 7. Terminal QR Codes
 ```bash
 # Generate scannable QR in terminal
 omnitool qr "https://github.com/pranov888/omnitool"
 ```
 
-### 6. JSON Formatting and Validation
+### 8. JSON Formatting and Validation
 ```bash
 # Format and prettify JSON string or file
 omnitool json format '{"service":"api","status":"ok","latency_ms":14}'
@@ -132,24 +149,37 @@ cat data.json | omnitool json minify -
 omnitool json validate '{"items":[1,2,3]}'
 ```
 
-### 7. System and Hardware Telemetry
+### 9. System and Hardware Telemetry
 ```bash
 # Print host info, CPU model, RAM usage, and disk space
 omnitool sys
 ```
 
-### 8. Network Probes and Latency
+### 10. Network Probes and Latency
 ```bash
 # Inspect network interfaces
 omnitool net interfaces
 
 # Test TCP latency to host (default port 443)
 omnitool net ping github.com --port 443
+
+# Resolve DNS and measure resolution time
+omnitool net dns github.com
 ```
 
 ---
 
 ## Roadmap and Changelog
+
+### v0.7.0 - Network DNS Diagnostics
+- Added `net dns` command for multi-address resolution and lookup latency measurement
+- Cross-platform IPv4 and IPv6 resolution telemetry
+- Expanded test suite to 31 tests
+
+### v0.6.0 - Text Analytics and Casing Utilities
+- Added `text` module for line, word, character, and byte telemetry
+- Implemented case formatting conversions (snake_case, camelCase, kebab-case, UPPER_CASE)
+- Full stdin pipeline integration and expanded unit tests to 30 tests
 
 ### v0.5.0 - Time and Timestamp Telemetry
 - Added `time` module with high-precision UNIX epoch timestamps

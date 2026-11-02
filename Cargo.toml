@@ -1,6 +1,6 @@
 [package]
 name = "omnitool"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 authors = ["pranov888"]
 description = "A fast, all-in-one developer Swiss-Army knife CLI written in Rust"

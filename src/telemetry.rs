@@ -93,11 +93,22 @@ pub fn probe_tcp_latency(host: &str, port: u16) -> Result<Duration, String> {
         return Err(format!("Host '{host}' did not resolve to any IP address"));
     }
 
+    let mut last_error = None;
     let start = Instant::now();
-    match TcpStream::connect_timeout(&socket_addrs[0], Duration::from_secs(4)) {
-        Ok(_) => Ok(start.elapsed()),
-        Err(e) => Err(format!("Failed to connect to {target}: {e}")),
+
+    for addr in &socket_addrs {
+        match TcpStream::connect_timeout(addr, Duration::from_secs(3)) {
+            Ok(_) => return Ok(start.elapsed()),
+            Err(e) => {
+                last_error = Some(e);
+            }
+        }
     }
+
+    let err_msg = last_error
+        .map(|e| e.to_string())
+        .unwrap_or_else(|| "Unknown connection error".to_string());
+    Err(format!("Failed to connect to {target}: {err_msg}"))
 }
 
 #[cfg(test)]
@@ -116,5 +127,11 @@ mod tests {
         let interfaces = collect_network_interfaces();
         // At least loopback or local network interface should exist
         assert!(!interfaces.is_empty());
+    }
+
+    #[test]
+    fn test_probe_tcp_invalid_host() {
+        let res = probe_tcp_latency("non-existent-host.invalid-domain-test", 80);
+        assert!(res.is_err());
     }
 }

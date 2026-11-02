@@ -18,6 +18,10 @@ Instead of installing a dozen disconnected utilities, `omnitool` bundles everyda
   - Base64 encoding and decoding (standard, URL-safe, unpadded)
   - UUIDv4 generator
   - High-entropy secure password generation
+- **Data Encoding and Codecs**:
+  - URL percent-encoding and decoding (RFC 3986 with space/plus handling)
+  - Hexadecimal encoding and decoding with ASCII/UTF-8 validation
+  - Standard input (`-`) pipeline streaming support
 - **Terminal QR Code**:
   - Instant ASCII/UTF-8 scannable QR generation for links, text, and keys
 - **Data and JSON Tools**:
@@ -79,31 +83,46 @@ omnitool crypto uuid
 omnitool crypto pass --length 24 --symbols
 ```
 
-### 4. Terminal QR Codes
+### 4. URL and Hex Encoders
+```bash
+# URL percent-encode
+omnitool encode url-encode "hello world & rust=fast"
+
+# URL percent-decode
+omnitool encode url-decode "hello%20world%20%26%20rust%3Dfast"
+
+# Hex-encode text
+omnitool encode hex-encode "developer toolkit"
+
+# Hex-decode to text
+omnitool encode hex-decode "646576656c6f70657220746f6f6c6b6974"
+```
+
+### 5. Terminal QR Codes
 ```bash
 # Generate scannable QR in terminal
 omnitool qr "https://github.com/pranov888/omnitool"
 ```
 
-### 5. JSON Formatting and Validation
+### 6. JSON Formatting and Validation
 ```bash
 # Format and prettify JSON string or file
 omnitool json format '{"service":"api","status":"ok","latency_ms":14}'
 
-# Minify JSON
-omnitool json minify '{\n  "status": "ok"\n}'
+# Minify JSON from standard input pipeline
+cat data.json | omnitool json minify -
 
 # Validate JSON structure
 omnitool json validate '{"items":[1,2,3]}'
 ```
 
-### 6. System and Hardware Telemetry
+### 7. System and Hardware Telemetry
 ```bash
 # Print host info, CPU model, RAM usage, and disk space
 omnitool sys
 ```
 
-### 7. Network Probes and Latency
+### 8. Network Probes and Latency
 ```bash
 # Inspect network interfaces
 omnitool net interfaces
@@ -115,6 +134,12 @@ omnitool net ping github.com --port 443
 ---
 
 ## Roadmap and Changelog
+
+### v0.4.0 - Data Codecs, Dual-Stack Probing, and Stdin Pipeline Support
+- Added `encode` module for URL percent-encoding/decoding and hexadecimal encoding/decoding
+- Added standard input (`-`) streaming support for input-processing commands
+- Enhanced network TCP ping with automatic dual-stack (IPv4/IPv6) socket fallback
+- Expanded test suite to 19 unit tests with full cross-platform coverage
 
 ### v0.3.0 - Hardware and Network Diagnostics
 - Added `sys` telemetry for hardware, memory, and mounted disk metrics

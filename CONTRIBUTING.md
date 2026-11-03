@@ -14,8 +14,13 @@ Thank you for your interest in improving `omnitool`! We welcome contributions of
    cargo test
    ```
 
-3. **Submitting a Pull Request**:
-   - Create a feature branch: `git checkout -b feat/your-feature-name`
-   - Follow Conventional Commits: `feat(...)`, `fix(...)`, `docs(...)`
+3. **Quality and Verification Checklist**:
    - Ensure all tests pass: `cargo test`
-   - Open a Pull Request targeting `main`.
+   - Verify code formatting: `cargo fmt --check`
+   - Verify static analysis and lints: `cargo clippy -- -D warnings`
+
+4. **Submitting a Pull Request**:
+   - Create a feature branch from `dev`: `git checkout -b feat/your-feature-name`
+   - Follow Conventional Commits: `feat(...)`, `fix(...)`, `docs(...)`
+   - Ensure commits are atomic and descriptive
+   - Open a Pull Request targeting `dev`

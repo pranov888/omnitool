@@ -2,3 +2,9 @@
 **/*.rs.bk
 *.log
 .DS_Store
+
+# Internal Agent & Confidential Strategy Files (Local Only - Never Push to Public GitHub)
+AGENTS.md
+PLAN.md
+.agents/
+.gemini/

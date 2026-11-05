@@ -52,7 +52,7 @@ struct CryptoArgs {
 
 #[derive(Subcommand)]
 enum CryptoSubcommand {
-    /// Compute cryptographic hash (SHA-256, MD5)
+    /// Compute cryptographic hash (SHA-256, SHA-512, MD5)
     Hash {
         #[arg(short, long, default_value = "sha256")]
         algorithm: HashAlgorithm,
@@ -85,6 +85,7 @@ enum CryptoSubcommand {
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum HashAlgorithm {
     Sha256,
+    Sha512,
     Md5,
 }
 
@@ -250,6 +251,7 @@ fn main() {
             CryptoSubcommand::Hash { algorithm, text } => {
                 let digest = match algorithm {
                     HashAlgorithm::Sha256 => crypto::hash_sha256(&text),
+                    HashAlgorithm::Sha512 => crypto::hash_sha512(&text),
                     HashAlgorithm::Md5 => crypto::hash_md5(&text),
                 };
                 println!("{} {}", "Hash:".bold().cyan(), digest.green().bold());
@@ -320,7 +322,11 @@ fn main() {
                     "Epoch (ms):".bold(),
                     millis.to_string().green()
                 );
-                println!("  {:<15} {}", "ISO 8601:".bold(), iso.bright_yellow().bold());
+                println!(
+                    "  {:<15} {}",
+                    "ISO 8601:".bold(),
+                    iso.bright_yellow().bold()
+                );
             }
             TimeSubcommand::ToIso { epoch } => {
                 let iso = time_tool::epoch_to_iso8601(epoch);
@@ -328,7 +334,11 @@ fn main() {
             }
             TimeSubcommand::ToEpoch { iso } => match time_tool::iso8601_to_epoch(&iso) {
                 Ok(epoch) => {
-                    println!("{} {}", "Unix Epoch (s):".bold().cyan(), epoch.to_string().green().bold());
+                    println!(
+                        "{} {}",
+                        "Unix Epoch (s):".bold().cyan(),
+                        epoch.to_string().green().bold()
+                    );
                 }
                 Err(err) => {
                     eprintln!("{} {}", "Error:".bold().red(), err);
@@ -341,8 +351,16 @@ fn main() {
                 let payload = resolve_input_or_file(&target);
                 let stats = text_tool::analyze_text(&payload);
                 println!("{}", "Text Metrics & Content Statistics".bold().cyan());
-                println!("  {:<15} {}", "Lines:".bold(), stats.lines.to_string().green());
-                println!("  {:<15} {}", "Words:".bold(), stats.words.to_string().green());
+                println!(
+                    "  {:<15} {}",
+                    "Lines:".bold(),
+                    stats.lines.to_string().green()
+                );
+                println!(
+                    "  {:<15} {}",
+                    "Words:".bold(),
+                    stats.words.to_string().green()
+                );
                 println!(
                     "  {:<15} {}",
                     "Characters:".bold(),
@@ -363,7 +381,11 @@ fn main() {
                     TextCaseStyle::Lower => text_tool::CaseStyle::Lower,
                 };
                 let transformed = text_tool::convert_case(&text, style_enum);
-                println!("{} {}", "Formatted Text:".bold().cyan(), transformed.green().bold());
+                println!(
+                    "{} {}",
+                    "Formatted Text:".bold().cyan(),
+                    transformed.green().bold()
+                );
             }
         },
         Commands::Qr(qr_args) => match qr::generate_terminal_qr(&qr_args.content) {

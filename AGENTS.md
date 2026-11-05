@@ -27,7 +27,7 @@ This internal tracking document preserves architecture decisions, execution stat
   - Execution Status: Both PR #15 and PR #16 merged unreviewed directly into `main`. Awaiting GitHub asynchronous batch calculation.
 - Galaxy Brain:
   - Milestone Requirement: 2 accepted answers on Q&A discussions asked by other users in public repositories.
-  - Execution Status: Discussions #17 and #18 opened by `ARES49999`. Technical answers submitted by `pranov888` via comments DC_kwDOVf-oLM4BKGXg and DC_kwDOVf-oLM4BKGXj. Awaiting acceptance confirmation from `ARES49999`.
+  - Execution Status: Discussions #17 and #18 opened by `ARES49999`. Technical answers submitted by `pranov888` and marked as accepted answers. Verified on GitHub backend (`isAnswered: true`). Awaiting GitHub batch calculation.
 
 ## 3. Implemented Capabilities
 - Crypto (`src/crypto.rs`): SHA-256, SHA-512, MD5, Base64 encode/decode, UUIDv4 generation, secure password generation.

@@ -38,7 +38,25 @@ This internal tracking document preserves architecture decisions, execution stat
 - Telemetry (`src/telemetry.rs`): System hardware overview, TCP probe latency, DNS resolution.
 - JSON (`src/json_tool.rs`): Pretty-print formatting, minification, syntax validation.
 
-## 4. Next Steps
+## 4. Project Rules: Research, Design Standards, and Deployment Protocol
+These rules are binding specifically for this project folder and its future evolutions:
+
+### Rule 4.1: Deep Problem Research and Trend Alignment
+- Every tool, feature, and sub-project built within this workspace must stem from deep research into real-world developer problems.
+- All architecture and tooling choices must stay modern, high-performance, and aligned with current engineering trends rather than relying on obsolete or legacy paradigms.
+
+### Rule 4.2: Dedicated Showcase Website Mandate
+- Every project developed here must feature a dedicated, high-aesthetic showcase website.
+- The website must fulfill two distinct objectives:
+  1. Designer Portfolio: Exhibit world-class UI/UX design craftsmanship, motion design, typography, and polish to highlight design skills.
+  2. Clear and Simple Project Explanations: Deconstruct complex technical utilities into simple, intuitive visual guides and interactive demos for developers.
+
+### Rule 4.3: Website Repository Privacy and Vercel Hosting Protocol
+- Repository Privacy: The source code repository for each showcase website must remain strictly **private** on GitHub to safeguard design assets, proprietary components, and architecture.
+- Public Deployment: The website must be publicly deployed and hosted on **Vercel** for fast edge delivery, live portfolio access, and continuous deployment from the private repository.
+
+## 5. Next Steps
 - Monitor GitHub profile achievements tab for Pair Extraordinaire and YOLO recalculation.
 - Add file checksum inspection utility (`omnitool crypto checksum <path>`).
 - Implement string slugification and reverse utilities in `text_tool`.
+- Plan and design the dedicated private showcase website for Omnitool on Vercel.

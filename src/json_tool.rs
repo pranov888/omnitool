@@ -1,26 +1,43 @@
 use serde_json::Value;
 
 pub fn format_json(raw: &str) -> Result<String, String> {
-    let parsed: Value = serde_json::from_str(raw)
-        .map_err(|e| format!("Invalid JSON syntax at line {}:{}: {e}", e.line(), e.column()))?;
+    let parsed: Value = serde_json::from_str(raw).map_err(|e| {
+        format!(
+            "Invalid JSON syntax at line {}:{}: {e}",
+            e.line(),
+            e.column()
+        )
+    })?;
     serde_json::to_string_pretty(&parsed).map_err(|e| format!("Formatting error: {e}"))
 }
 
 pub fn minify_json(raw: &str) -> Result<String, String> {
-    let parsed: Value = serde_json::from_str(raw)
-        .map_err(|e| format!("Invalid JSON syntax at line {}:{}: {e}", e.line(), e.column()))?;
+    let parsed: Value = serde_json::from_str(raw).map_err(|e| {
+        format!(
+            "Invalid JSON syntax at line {}:{}: {e}",
+            e.line(),
+            e.column()
+        )
+    })?;
     serde_json::to_string(&parsed).map_err(|e| format!("Minification error: {e}"))
 }
 
 pub fn validate_json(raw: &str) -> Result<String, String> {
     match serde_json::from_str::<Value>(raw) {
-        Ok(Value::Object(map)) => Ok(format!("Valid JSON Object with {} top-level keys", map.len())),
+        Ok(Value::Object(map)) => Ok(format!(
+            "Valid JSON Object with {} top-level keys",
+            map.len()
+        )),
         Ok(Value::Array(arr)) => Ok(format!("Valid JSON Array with {} elements", arr.len())),
         Ok(Value::String(_)) => Ok("Valid JSON primitive (string)".to_string()),
         Ok(Value::Number(_)) => Ok("Valid JSON primitive (number)".to_string()),
         Ok(Value::Bool(_)) => Ok("Valid JSON primitive (boolean)".to_string()),
         Ok(Value::Null) => Ok("Valid JSON null".to_string()),
-        Err(e) => Err(format!("Invalid JSON syntax at line {}:{}: {e}", e.line(), e.column())),
+        Err(e) => Err(format!(
+            "Invalid JSON syntax at line {}:{}: {e}",
+            e.line(),
+            e.column()
+        )),
     }
 }
 

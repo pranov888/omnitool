@@ -165,6 +165,9 @@ mod tests {
     fn test_resolve_dns_loopback() {
         let res = resolve_dns("localhost").expect("localhost resolves");
         assert!(!res.addresses.is_empty());
-        assert!(res.addresses.contains(&"127.0.0.1".to_string()) || res.addresses.contains(&"::1".to_string()));
+        assert!(
+            res.addresses.contains(&"127.0.0.1".to_string())
+                || res.addresses.contains(&"::1".to_string())
+        );
     }
 }

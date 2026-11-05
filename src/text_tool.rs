@@ -112,7 +112,10 @@ mod tests {
     #[test]
     fn test_convert_case_snake() {
         assert_eq!(convert_case("HelloWorld", CaseStyle::Snake), "hello_world");
-        assert_eq!(convert_case("kebab-case-text", CaseStyle::Snake), "kebab_case_text");
+        assert_eq!(
+            convert_case("kebab-case-text", CaseStyle::Snake),
+            "kebab_case_text"
+        );
     }
 
     #[test]
@@ -122,7 +125,10 @@ mod tests {
 
     #[test]
     fn test_convert_case_camel() {
-        assert_eq!(convert_case("hello_world_text", CaseStyle::Camel), "helloWorldText");
+        assert_eq!(
+            convert_case("hello_world_text", CaseStyle::Camel),
+            "helloWorldText"
+        );
     }
 
     #[test]

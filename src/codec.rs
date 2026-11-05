@@ -19,12 +19,12 @@ pub fn url_decode(input: &str) -> Result<String, String> {
 
     while let Some(b) = chars.next() {
         if b == b'%' {
-            let h1 = chars
-                .next()
-                .ok_or_else(|| "Incomplete percent-encoding sequence at end of input".to_string())?;
-            let h2 = chars
-                .next()
-                .ok_or_else(|| "Incomplete percent-encoding sequence at end of input".to_string())?;
+            let h1 = chars.next().ok_or_else(|| {
+                "Incomplete percent-encoding sequence at end of input".to_string()
+            })?;
+            let h2 = chars.next().ok_or_else(|| {
+                "Incomplete percent-encoding sequence at end of input".to_string()
+            })?;
             let hex_bytes = [h1, h2];
             let hex_str = std::str::from_utf8(&hex_bytes)
                 .map_err(|_| "Invalid ASCII in percent-encoding escape".to_string())?;
@@ -47,7 +47,7 @@ pub fn hex_encode(input: &[u8]) -> String {
 
 pub fn hex_decode(input: &str) -> Result<Vec<u8>, String> {
     let cleaned = input.trim();
-    if cleaned.len() % 2 != 0 {
+    if !cleaned.len().is_multiple_of(2) {
         return Err("Hex string must have an even length".to_string());
     }
 
@@ -75,7 +75,10 @@ mod tests {
     fn test_url_encode_and_decode() {
         let original = "Hello World! / 2026? &key=val+1";
         let encoded = url_encode(original);
-        assert_eq!(encoded, "Hello%20World%21%20%2F%202026%3F%20%26key%3Dval%2B1");
+        assert_eq!(
+            encoded,
+            "Hello%20World%21%20%2F%202026%3F%20%26key%3Dval%2B1"
+        );
 
         let decoded = url_decode(&encoded).expect("Decode should succeed");
         assert_eq!(decoded, original);

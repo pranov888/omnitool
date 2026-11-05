@@ -14,7 +14,7 @@ Instead of installing a dozen disconnected utilities, `omnitool` bundles everyda
 ## Features
 
 - **Crypto and Security**:
-  - Hash computation (`SHA-256`, `MD5`)
+  - Hash computation (`SHA-256`, `SHA-512`, `MD5`)
   - Base64 encoding and decoding (standard, URL-safe, unpadded)
   - UUIDv4 generator
   - High-entropy secure password generation
@@ -68,6 +68,9 @@ cargo run -- --help
 ```bash
 # Compute SHA-256
 omnitool crypto hash "my-secret-payload"
+
+# Compute SHA-512
+omnitool crypto hash --algorithm sha512 "my-secret-payload"
 
 # Compute MD5
 omnitool crypto hash --algorithm md5 "my-secret-payload"

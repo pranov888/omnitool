@@ -6,5 +6,6 @@
 # Internal Agent & Confidential Strategy Files (Local Only - Never Push to Public GitHub)
 AGENTS.md
 PLAN.md
+PROMPT.md
 .agents/
 .gemini/

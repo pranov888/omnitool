@@ -1,3 +1,5 @@
+use serde_json::Value;
+
 pub fn url_encode(input: &str) -> String {
     let mut encoded = String::with_capacity(input.len());
     for byte in input.bytes() {
@@ -67,6 +69,40 @@ pub fn hex_decode_to_string(input: &str) -> Result<String, String> {
     String::from_utf8(bytes).map_err(|e| format!("Decoded hex bytes are not valid UTF-8: {e}"))
 }
 
+pub struct JwtInspection {
+    pub header: Value,
+    pub payload: Value,
+    pub signature: String,
+}
+
+pub fn inspect_jwt(token: &str) -> Result<JwtInspection, String> {
+    let parts: Vec<&str> = token.trim().split('.').collect();
+    if parts.len() < 2 || parts.len() > 3 {
+        return Err("Invalid JWT token format: expected header.payload or header.payload.signature".to_string());
+    }
+
+    let decode_part = |part: &str| -> Result<Value, String> {
+        let decoded = crate::crypto::base64_decode(part)
+            .map_err(|e| format!("Failed to decode token component: {e}"))?;
+        serde_json::from_str(&decoded)
+            .map_err(|e| format!("Token component is not valid JSON: {e}"))
+    };
+
+    let header = decode_part(parts[0])?;
+    let payload = decode_part(parts[1])?;
+    let signature = if parts.len() == 3 {
+        parts[2].to_string()
+    } else {
+        String::new()
+    };
+
+    Ok(JwtInspection {
+        header,
+        payload,
+        signature,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -117,5 +153,26 @@ mod tests {
     fn test_hex_decode_invalid_chars() {
         let invalid = "zz";
         assert!(hex_decode(invalid).is_err());
+    }
+
+    #[test]
+    fn test_inspect_jwt() {
+        // Standard sample JWT:
+        // Header: {"alg":"HS256","typ":"JWT"} -> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+        // Payload: {"sub":"1234567890","name":"John Doe","iat":1516239022} -> eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ
+        // Signature: SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+        let inspection = inspect_jwt(token).expect("JWT should decode successfully");
+        assert_eq!(inspection.header["alg"], "HS256");
+        assert_eq!(inspection.payload["name"], "John Doe");
+        assert_eq!(inspection.payload["sub"], "1234567890");
+        assert_eq!(inspection.payload["iat"], 1516239022);
+        assert_eq!(inspection.signature, "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c");
+    }
+
+    #[test]
+    fn test_inspect_jwt_invalid_format() {
+        let invalid = "only-one-part";
+        assert!(inspect_jwt(invalid).is_err());
     }
 }

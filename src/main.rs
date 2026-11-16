@@ -124,6 +124,11 @@ enum EncodeSubcommand {
         /// Hexadecimal string to decode
         hex: String,
     },
+    /// Inspect and decode JSON Web Token (JWT) header and payload claims
+    Jwt {
+        /// JWT token string (header.payload or header.payload.signature)
+        token: String,
+    },
 }
 
 #[derive(Args)]
@@ -354,6 +359,33 @@ fn main() {
             EncodeSubcommand::HexDecode { hex } => match codec::hex_decode_to_string(&hex) {
                 Ok(decoded) => {
                     println!("{} {}", "Hex Decoded:".bold().cyan(), decoded.green());
+                }
+                Err(err) => {
+                    eprintln!("{} {}", "Error:".bold().red(), err);
+                    std::process::exit(1);
+                }
+            },
+            EncodeSubcommand::Jwt { token } => match codec::inspect_jwt(&token) {
+                Ok(inspection) => {
+                    let header_str = serde_json::to_string_pretty(&inspection.header)
+                        .unwrap_or_else(|_| "{}".to_string());
+                    let payload_str = serde_json::to_string_pretty(&inspection.payload)
+                        .unwrap_or_else(|_| "{}".to_string());
+
+                    println!("{}", "JWT Token Inspection Telemetry".bold().cyan());
+                    println!("\n{}", "Header:".bold().yellow());
+                    println!("{header_str}");
+                    println!("\n{}", "Payload Claims:".bold().green());
+                    println!("{payload_str}");
+                    if !inspection.signature.is_empty() {
+                        println!("\n{}", "Signature (signature component):".bold().magenta());
+                        let sig_display = if inspection.signature.len() > 32 {
+                            format!("{}...", &inspection.signature[..32])
+                        } else {
+                            inspection.signature
+                        };
+                        println!("  {sig_display}");
+                    }
                 }
                 Err(err) => {
                     eprintln!("{} {}", "Error:".bold().red(), err);

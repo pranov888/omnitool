@@ -154,13 +154,23 @@ enum TextSubcommand {
         /// Text string, file path, or '-' for stdin
         target: String,
     },
-    /// Convert text case style (snake, camel, kebab, upper, lower)
+    /// Convert text case style (snake, camel, kebab, upper, lower, title)
     Case {
         /// Target case formatting style
         #[arg(short, long, value_enum)]
         style: TextCaseStyle,
         /// Input text to transform
         text: String,
+    },
+    /// Generate a URL-friendly slug from text or file
+    Slug {
+        /// Text string, file path, or '-' for stdin
+        target: String,
+    },
+    /// Reverse characters of a text string or file
+    Reverse {
+        /// Text string, file path, or '-' for stdin
+        target: String,
     },
 }
 
@@ -171,6 +181,7 @@ enum TextCaseStyle {
     Kebab,
     Upper,
     Lower,
+    Title,
 }
 
 #[derive(Args)]
@@ -379,6 +390,7 @@ fn main() {
                     TextCaseStyle::Kebab => text_tool::CaseStyle::Kebab,
                     TextCaseStyle::Upper => text_tool::CaseStyle::Upper,
                     TextCaseStyle::Lower => text_tool::CaseStyle::Lower,
+                    TextCaseStyle::Title => text_tool::CaseStyle::Title,
                 };
                 let transformed = text_tool::convert_case(&text, style_enum);
                 println!(
@@ -386,6 +398,16 @@ fn main() {
                     "Formatted Text:".bold().cyan(),
                     transformed.green().bold()
                 );
+            }
+            TextSubcommand::Slug { target } => {
+                let payload = resolve_input_or_file(&target);
+                let slug = text_tool::slugify(&payload);
+                println!("{} {}", "Slug:".bold().cyan(), slug.green().bold());
+            }
+            TextSubcommand::Reverse { target } => {
+                let payload = resolve_input_or_file(&target);
+                let reversed = text_tool::reverse_text(&payload);
+                println!("{} {}", "Reversed:".bold().cyan(), reversed.green().bold());
             }
         },
         Commands::Qr(qr_args) => match qr::generate_terminal_qr(&qr_args.content) {

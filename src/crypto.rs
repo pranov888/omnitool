@@ -2,7 +2,84 @@ use base64::prelude::*;
 use md5::{Digest, Md5};
 use rand::Rng;
 use sha2::{Sha256, Sha512};
+use std::fs::File;
+use std::io::{BufReader, Read};
+use std::path::Path;
 use uuid::Uuid;
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum ChecksumAlgorithm {
+    Sha256,
+    Sha512,
+    Md5,
+}
+
+pub struct ChecksumResult {
+    pub algorithm: String,
+    pub digest: String,
+    pub bytes_read: u64,
+}
+
+pub fn compute_file_checksum<P: AsRef<Path>>(
+    path: P,
+    algorithm: ChecksumAlgorithm,
+) -> Result<ChecksumResult, std::io::Error> {
+    let file = File::open(path)?;
+    let mut reader = BufReader::new(file);
+    let mut buffer = [0u8; 8192];
+    let mut total_bytes = 0u64;
+
+    match algorithm {
+        ChecksumAlgorithm::Sha256 => {
+            let mut hasher = Sha256::new();
+            loop {
+                let count = reader.read(&mut buffer)?;
+                if count == 0 {
+                    break;
+                }
+                hasher.update(&buffer[..count]);
+                total_bytes += count as u64;
+            }
+            Ok(ChecksumResult {
+                algorithm: "SHA-256".to_string(),
+                digest: format!("{:x}", hasher.finalize()),
+                bytes_read: total_bytes,
+            })
+        }
+        ChecksumAlgorithm::Sha512 => {
+            let mut hasher = Sha512::new();
+            loop {
+                let count = reader.read(&mut buffer)?;
+                if count == 0 {
+                    break;
+                }
+                hasher.update(&buffer[..count]);
+                total_bytes += count as u64;
+            }
+            Ok(ChecksumResult {
+                algorithm: "SHA-512".to_string(),
+                digest: format!("{:x}", hasher.finalize()),
+                bytes_read: total_bytes,
+            })
+        }
+        ChecksumAlgorithm::Md5 => {
+            let mut hasher = Md5::new();
+            loop {
+                let count = reader.read(&mut buffer)?;
+                if count == 0 {
+                    break;
+                }
+                hasher.update(&buffer[..count]);
+                total_bytes += count as u64;
+            }
+            Ok(ChecksumResult {
+                algorithm: "MD5".to_string(),
+                digest: format!("{:x}", hasher.finalize()),
+                bytes_read: total_bytes,
+            })
+        }
+    }
+}
 
 pub fn hash_sha256(input: &str) -> String {
     let mut hasher = Sha256::new();
@@ -133,5 +210,32 @@ mod tests {
     fn test_password_length() {
         let pass = generate_password(16, true);
         assert_eq!(pass.len(), 16);
+    }
+
+    #[test]
+    fn test_compute_file_checksum() {
+        use std::io::Write;
+        let temp_dir = std::env::temp_dir();
+        let test_file = temp_dir.join("omnitool_checksum_test.txt");
+        let content = b"hello";
+        let mut f = File::create(&test_file).expect("Create test file");
+        f.write_all(content).expect("Write test file");
+
+        let sha256_res = compute_file_checksum(&test_file, ChecksumAlgorithm::Sha256)
+            .expect("SHA256 checksum");
+        assert_eq!(sha256_res.digest, hash_sha256("hello"));
+        assert_eq!(sha256_res.bytes_read, 5);
+
+        let sha512_res = compute_file_checksum(&test_file, ChecksumAlgorithm::Sha512)
+            .expect("SHA512 checksum");
+        assert_eq!(sha512_res.digest, hash_sha512("hello"));
+        assert_eq!(sha512_res.bytes_read, 5);
+
+        let md5_res = compute_file_checksum(&test_file, ChecksumAlgorithm::Md5)
+            .expect("MD5 checksum");
+        assert_eq!(md5_res.digest, hash_md5("hello"));
+        assert_eq!(md5_res.bytes_read, 5);
+
+        let _ = std::fs::remove_file(test_file);
     }
 }

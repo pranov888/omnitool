@@ -31,6 +31,7 @@ pub enum CaseStyle {
     Kebab,
     Upper,
     Lower,
+    Title,
 }
 
 pub fn convert_case(input: &str, style: CaseStyle) -> String {
@@ -72,6 +73,21 @@ pub fn convert_case(input: &str, style: CaseStyle) -> String {
         CaseStyle::Kebab => words.join("-"),
         CaseStyle::Upper => words.join("_").to_uppercase(),
         CaseStyle::Lower => words.join(" "),
+        CaseStyle::Title => words
+            .iter()
+            .map(|word| {
+                let mut chars = word.chars();
+                match chars.next() {
+                    Some(first) => {
+                        let mut s = first.to_uppercase().to_string();
+                        s.push_str(chars.as_str());
+                        s
+                    }
+                    None => String::new(),
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" "),
         CaseStyle::Camel => {
             let mut result = words[0].clone();
             for word in words.iter().skip(1) {
@@ -84,6 +100,31 @@ pub fn convert_case(input: &str, style: CaseStyle) -> String {
             result
         }
     }
+}
+
+pub fn slugify(input: &str) -> String {
+    let mut slug = String::with_capacity(input.len());
+    let mut last_was_dash = false;
+
+    for ch in input.chars() {
+        if ch.is_ascii_alphanumeric() {
+            slug.push(ch.to_ascii_lowercase());
+            last_was_dash = false;
+        } else if !last_was_dash && !slug.is_empty() {
+            slug.push('-');
+            last_was_dash = true;
+        }
+    }
+
+    if slug.ends_with('-') {
+        slug.pop();
+    }
+
+    slug
+}
+
+pub fn reverse_text(input: &str) -> String {
+    input.chars().rev().collect()
 }
 
 #[cfg(test)]
@@ -134,5 +175,29 @@ mod tests {
     #[test]
     fn test_convert_case_upper() {
         assert_eq!(convert_case("hello world", CaseStyle::Upper), "HELLO_WORLD");
+    }
+
+    #[test]
+    fn test_convert_case_title() {
+        assert_eq!(convert_case("hello_world_text", CaseStyle::Title), "Hello World Text");
+        assert_eq!(convert_case("kebab-case-slug", CaseStyle::Title), "Kebab Case Slug");
+    }
+
+    #[test]
+    fn test_slugify() {
+        assert_eq!(
+            slugify("Hello, World! This is Rust in 2026."),
+            "hello-world-this-is-rust-in-2026"
+        );
+        assert_eq!(slugify("   --Complex String & Symbols--   "), "complex-string-symbols");
+        assert_eq!(slugify("already-a-slug"), "already-a-slug");
+        assert_eq!(slugify(""), "");
+    }
+
+    #[test]
+    fn test_reverse_text() {
+        assert_eq!(reverse_text("hello"), "olleh");
+        assert_eq!(reverse_text("Rust 2026"), "6202 tsuR");
+        assert_eq!(reverse_text(""), "");
     }
 }

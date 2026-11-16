@@ -80,6 +80,13 @@ enum CryptoSubcommand {
         #[arg(short, long, default_value_t = true)]
         symbols: bool,
     },
+    /// Calculate file checksum hash (SHA-256, SHA-512, MD5)
+    Checksum {
+        #[arg(short, long, default_value = "sha256")]
+        algorithm: HashAlgorithm,
+        /// Path to the file
+        path: String,
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -291,6 +298,39 @@ fn main() {
                     "Generated Password:".bold().cyan(),
                     password.bright_green().bold()
                 );
+            }
+            CryptoSubcommand::Checksum { algorithm, path } => {
+                let algo = match algorithm {
+                    HashAlgorithm::Sha256 => crypto::ChecksumAlgorithm::Sha256,
+                    HashAlgorithm::Sha512 => crypto::ChecksumAlgorithm::Sha512,
+                    HashAlgorithm::Md5 => crypto::ChecksumAlgorithm::Md5,
+                };
+                match crypto::compute_file_checksum(&path, algo) {
+                    Ok(res) => {
+                        println!("{}", "File Checksum Telemetry".bold().cyan());
+                        println!("  {:<15} {}", "File Path:".bold(), path);
+                        println!("  {:<15} {}", "Algorithm:".bold(), res.algorithm.bright_yellow());
+                        println!(
+                            "  {:<15} {} bytes",
+                            "Bytes Read:".bold(),
+                            res.bytes_read.to_string().green()
+                        );
+                        println!(
+                            "  {:<15} {}",
+                            "Checksum:".bold(),
+                            res.digest.bright_green().bold()
+                        );
+                    }
+                    Err(err) => {
+                        eprintln!(
+                            "{} Failed to compute checksum for '{}': {}",
+                            "Error:".bold().red(),
+                            path,
+                            err
+                        );
+                        std::process::exit(1);
+                    }
+                }
             }
         },
         Commands::Encode(encode_args) => match encode_args.action {

@@ -15,7 +15,7 @@ use std::io::{self, Read};
 #[command(
     name = "omnitool",
     author = "pranov888",
-    version = "0.7.0",
+    version = "0.8.0",
     about = "All-in-one developer Swiss-Army knife CLI written in Rust",
     long_about = "Omnitool provides everyday developer utilities (crypto, QR codes, JSON tools, encoders, system info, and network diagnostics) in a single high-performance binary."
 )]
@@ -80,6 +80,13 @@ enum CryptoSubcommand {
         #[arg(short, long, default_value_t = true)]
         symbols: bool,
     },
+    /// Calculate file checksum hash (SHA-256, SHA-512, MD5)
+    Checksum {
+        #[arg(short, long, default_value = "sha256")]
+        algorithm: HashAlgorithm,
+        /// Path to the file
+        path: String,
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -116,6 +123,11 @@ enum EncodeSubcommand {
     HexDecode {
         /// Hexadecimal string to decode
         hex: String,
+    },
+    /// Inspect and decode JSON Web Token (JWT) header and payload claims
+    Jwt {
+        /// JWT token string (header.payload or header.payload.signature)
+        token: String,
     },
 }
 
@@ -154,13 +166,23 @@ enum TextSubcommand {
         /// Text string, file path, or '-' for stdin
         target: String,
     },
-    /// Convert text case style (snake, camel, kebab, upper, lower)
+    /// Convert text case style (snake, camel, kebab, upper, lower, title)
     Case {
         /// Target case formatting style
         #[arg(short, long, value_enum)]
         style: TextCaseStyle,
         /// Input text to transform
         text: String,
+    },
+    /// Generate a URL-friendly slug from text or file
+    Slug {
+        /// Text string, file path, or '-' for stdin
+        target: String,
+    },
+    /// Reverse characters of a text string or file
+    Reverse {
+        /// Text string, file path, or '-' for stdin
+        target: String,
     },
 }
 
@@ -171,6 +193,7 @@ enum TextCaseStyle {
     Kebab,
     Upper,
     Lower,
+    Title,
 }
 
 #[derive(Args)]
@@ -281,6 +304,39 @@ fn main() {
                     password.bright_green().bold()
                 );
             }
+            CryptoSubcommand::Checksum { algorithm, path } => {
+                let algo = match algorithm {
+                    HashAlgorithm::Sha256 => crypto::ChecksumAlgorithm::Sha256,
+                    HashAlgorithm::Sha512 => crypto::ChecksumAlgorithm::Sha512,
+                    HashAlgorithm::Md5 => crypto::ChecksumAlgorithm::Md5,
+                };
+                match crypto::compute_file_checksum(&path, algo) {
+                    Ok(res) => {
+                        println!("{}", "File Checksum Telemetry".bold().cyan());
+                        println!("  {:<15} {}", "File Path:".bold(), path);
+                        println!("  {:<15} {}", "Algorithm:".bold(), res.algorithm.bright_yellow());
+                        println!(
+                            "  {:<15} {} bytes",
+                            "Bytes Read:".bold(),
+                            res.bytes_read.to_string().green()
+                        );
+                        println!(
+                            "  {:<15} {}",
+                            "Checksum:".bold(),
+                            res.digest.bright_green().bold()
+                        );
+                    }
+                    Err(err) => {
+                        eprintln!(
+                            "{} Failed to compute checksum for '{}': {}",
+                            "Error:".bold().red(),
+                            path,
+                            err
+                        );
+                        std::process::exit(1);
+                    }
+                }
+            }
         },
         Commands::Encode(encode_args) => match encode_args.action {
             EncodeSubcommand::UrlEncode { text } => {
@@ -303,6 +359,33 @@ fn main() {
             EncodeSubcommand::HexDecode { hex } => match codec::hex_decode_to_string(&hex) {
                 Ok(decoded) => {
                     println!("{} {}", "Hex Decoded:".bold().cyan(), decoded.green());
+                }
+                Err(err) => {
+                    eprintln!("{} {}", "Error:".bold().red(), err);
+                    std::process::exit(1);
+                }
+            },
+            EncodeSubcommand::Jwt { token } => match codec::inspect_jwt(&token) {
+                Ok(inspection) => {
+                    let header_str = serde_json::to_string_pretty(&inspection.header)
+                        .unwrap_or_else(|_| "{}".to_string());
+                    let payload_str = serde_json::to_string_pretty(&inspection.payload)
+                        .unwrap_or_else(|_| "{}".to_string());
+
+                    println!("{}", "JWT Token Inspection Telemetry".bold().cyan());
+                    println!("\n{}", "Header:".bold().yellow());
+                    println!("{header_str}");
+                    println!("\n{}", "Payload Claims:".bold().green());
+                    println!("{payload_str}");
+                    if !inspection.signature.is_empty() {
+                        println!("\n{}", "Signature (signature component):".bold().magenta());
+                        let sig_display = if inspection.signature.len() > 32 {
+                            format!("{}...", &inspection.signature[..32])
+                        } else {
+                            inspection.signature
+                        };
+                        println!("  {sig_display}");
+                    }
                 }
                 Err(err) => {
                     eprintln!("{} {}", "Error:".bold().red(), err);
@@ -379,6 +462,7 @@ fn main() {
                     TextCaseStyle::Kebab => text_tool::CaseStyle::Kebab,
                     TextCaseStyle::Upper => text_tool::CaseStyle::Upper,
                     TextCaseStyle::Lower => text_tool::CaseStyle::Lower,
+                    TextCaseStyle::Title => text_tool::CaseStyle::Title,
                 };
                 let transformed = text_tool::convert_case(&text, style_enum);
                 println!(
@@ -386,6 +470,16 @@ fn main() {
                     "Formatted Text:".bold().cyan(),
                     transformed.green().bold()
                 );
+            }
+            TextSubcommand::Slug { target } => {
+                let payload = resolve_input_or_file(&target);
+                let slug = text_tool::slugify(&payload);
+                println!("{} {}", "Slug:".bold().cyan(), slug.green().bold());
+            }
+            TextSubcommand::Reverse { target } => {
+                let payload = resolve_input_or_file(&target);
+                let reversed = text_tool::reverse_text(&payload);
+                println!("{} {}", "Reversed:".bold().cyan(), reversed.green().bold());
             }
         },
         Commands::Qr(qr_args) => match qr::generate_terminal_qr(&qr_args.content) {

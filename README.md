@@ -15,10 +15,12 @@ Instead of installing a dozen disconnected utilities, `omnitool` bundles everyda
 
 - **Crypto and Security**:
   - Hash computation (`SHA-256`, `SHA-512`, `MD5`)
+  - File checksum verification with streaming chunk buffer (`SHA-256`, `SHA-512`, `MD5`)
   - Base64 encoding and decoding (standard, URL-safe, unpadded)
   - UUIDv4 generator
   - High-entropy secure password generation
 - **Data Encoding and Codecs**:
+  - JSON Web Token (JWT) offline header and claims payload inspection
   - URL percent-encoding and decoding (RFC 3986 with space/plus handling)
   - Hexadecimal encoding and decoding with ASCII/UTF-8 validation
   - Standard input (`-`) pipeline streaming support
@@ -28,7 +30,9 @@ Instead of installing a dozen disconnected utilities, `omnitool` bundles everyda
   - Strict calendar and leap-year validation
 - **Text Analytics and Transformations**:
   - Content telemetry (line count, word count, character count, byte size)
-  - Case formatting converters (snake_case, camelCase, kebab-case, UPPER_CASE, lower case)
+  - URL-friendly slug generation (`slugify`)
+  - String and grapheme reversal
+  - Case formatting converters (snake_case, camelCase, kebab-case, Title Case, UPPER_CASE, lower case)
   - Full support for files and standard input (`-`)
 - **Terminal QR Code**:
   - Instant ASCII/UTF-8 scannable QR generation for links, text, and keys
@@ -64,7 +68,7 @@ cargo run -- --help
 
 ## Usage Examples
 
-### 1. Cryptographic Hashes
+### 1. Cryptographic Hashes and File Checksums
 ```bash
 # Compute SHA-256
 omnitool crypto hash "my-secret-payload"
@@ -74,6 +78,9 @@ omnitool crypto hash --algorithm sha512 "my-secret-payload"
 
 # Compute MD5
 omnitool crypto hash --algorithm md5 "my-secret-payload"
+
+# Compute file checksum hash (streaming buffer)
+omnitool crypto checksum ./Cargo.toml --algorithm sha256
 ```
 
 ### 2. Base64 Encoding and Decoding
@@ -107,6 +114,9 @@ omnitool encode hex-encode "developer toolkit"
 
 # Hex-decode to text
 omnitool encode hex-decode "646576656c6f70657220746f6f6c6b6974"
+
+# Inspect JSON Web Token (JWT) header and payload claims offline
+omnitool encode jwt "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIn0.signature"
 ```
 
 ### 5. Time and Timestamp Operations
@@ -129,9 +139,16 @@ omnitool text count "Quick brown fox jumps\nover the lazy dog"
 # Stream input from pipe into text analyzer
 cat document.txt | omnitool text count -
 
-# Convert case style (snake, camel, kebab, upper)
+# Convert case style (snake, camel, kebab, upper, lower, title)
 omnitool text case --style snake "OmniToolCli"
 omnitool text case --style camel "omni_tool_cli"
+omnitool text case --style title "hello_world_swiss_army"
+
+# Generate URL-friendly slug
+omnitool text slug "Rust Swiss-Army Knife in 2026!"
+
+# Reverse text or file stream
+omnitool text reverse "Developer Toolkit"
 ```
 
 ### 7. Terminal QR Codes

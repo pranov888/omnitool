@@ -15,7 +15,7 @@ use std::io::{self, Read};
 #[command(
     name = "omnitool",
     author = "pranov888",
-    version = "0.7.0",
+    version = "0.8.0",
     about = "All-in-one developer Swiss-Army knife CLI written in Rust",
     long_about = "Omnitool provides everyday developer utilities (crypto, QR codes, JSON tools, encoders, system info, and network diagnostics) in a single high-performance binary."
 )]

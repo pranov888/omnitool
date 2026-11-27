@@ -1,5 +1,6 @@
 use base64::prelude::*;
 use md5::{Digest, Md5};
+use rand::seq::SliceRandom;
 use rand::Rng;
 use sha2::{Sha256, Sha512};
 use std::fs::File;
@@ -20,65 +21,46 @@ pub struct ChecksumResult {
     pub bytes_read: u64,
 }
 
+fn hash_reader<D: Digest>(mut reader: BufReader<File>) -> Result<(String, u64), std::io::Error> {
+    let mut hasher = D::new();
+    let mut buffer = [0u8; 8192];
+    let mut total_bytes = 0u64;
+
+    loop {
+        let count = reader.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        hasher.update(&buffer[..count]);
+        total_bytes += count as u64;
+    }
+
+    let digest = hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<String>();
+    Ok((digest, total_bytes))
+}
+
 pub fn compute_file_checksum<P: AsRef<Path>>(
     path: P,
     algorithm: ChecksumAlgorithm,
 ) -> Result<ChecksumResult, std::io::Error> {
     let file = File::open(path)?;
-    let mut reader = BufReader::new(file);
-    let mut buffer = [0u8; 8192];
-    let mut total_bytes = 0u64;
+    let reader = BufReader::new(file);
 
-    match algorithm {
-        ChecksumAlgorithm::Sha256 => {
-            let mut hasher = Sha256::new();
-            loop {
-                let count = reader.read(&mut buffer)?;
-                if count == 0 {
-                    break;
-                }
-                hasher.update(&buffer[..count]);
-                total_bytes += count as u64;
-            }
-            Ok(ChecksumResult {
-                algorithm: "SHA-256".to_string(),
-                digest: format!("{:x}", hasher.finalize()),
-                bytes_read: total_bytes,
-            })
-        }
-        ChecksumAlgorithm::Sha512 => {
-            let mut hasher = Sha512::new();
-            loop {
-                let count = reader.read(&mut buffer)?;
-                if count == 0 {
-                    break;
-                }
-                hasher.update(&buffer[..count]);
-                total_bytes += count as u64;
-            }
-            Ok(ChecksumResult {
-                algorithm: "SHA-512".to_string(),
-                digest: format!("{:x}", hasher.finalize()),
-                bytes_read: total_bytes,
-            })
-        }
-        ChecksumAlgorithm::Md5 => {
-            let mut hasher = Md5::new();
-            loop {
-                let count = reader.read(&mut buffer)?;
-                if count == 0 {
-                    break;
-                }
-                hasher.update(&buffer[..count]);
-                total_bytes += count as u64;
-            }
-            Ok(ChecksumResult {
-                algorithm: "MD5".to_string(),
-                digest: format!("{:x}", hasher.finalize()),
-                bytes_read: total_bytes,
-            })
-        }
-    }
+    let (algo_name, (digest, bytes_read)) = match algorithm {
+        ChecksumAlgorithm::Sha256 => ("SHA-256", hash_reader::<Sha256>(reader)?),
+        ChecksumAlgorithm::Sha512 => ("SHA-512", hash_reader::<Sha512>(reader)?),
+        ChecksumAlgorithm::Md5 => ("MD5", hash_reader::<Md5>(reader)?),
+    };
+
+    Ok(ChecksumResult {
+        algorithm: algo_name.to_string(),
+        digest,
+        bytes_read,
+    })
 }
 
 pub fn hash_sha256(input: &str) -> String {
@@ -104,23 +86,27 @@ pub fn base64_encode(input: &str) -> String {
 }
 
 pub fn base64_decode(input: &str) -> Result<String, String> {
-    let trimmed = input.trim();
+    // Strip surrounding and embedded ASCII whitespace (common in multiline MIME/CLI inputs)
+    let cleaned: String = input.chars().filter(|c| !c.is_ascii_whitespace()).collect();
+    if cleaned.is_empty() {
+        return Ok(String::new());
+    }
 
     // 1. Try standard base64 directly
-    if let Ok(bytes) = BASE64_STANDARD.decode(trimmed) {
+    if let Ok(bytes) = BASE64_STANDARD.decode(&cleaned) {
         return String::from_utf8(bytes).map_err(|e| format!("Invalid UTF-8 output: {e}"));
     }
 
     // 2. Try URL-safe base64 directly
-    if let Ok(bytes) = BASE64_URL_SAFE.decode(trimmed) {
+    if let Ok(bytes) = BASE64_URL_SAFE.decode(&cleaned) {
         return String::from_utf8(bytes).map_err(|e| format!("Invalid UTF-8 output: {e}"));
     }
 
     // 3. Fallback for unpadded inputs (common in JWTs / URL query params)
-    let padded = match trimmed.len() % 4 {
-        2 => format!("{trimmed}=="),
-        3 => format!("{trimmed}="),
-        _ => trimmed.to_string(),
+    let padded = match cleaned.len() % 4 {
+        2 => format!("{cleaned}=="),
+        3 => format!("{cleaned}="),
+        _ => cleaned,
     };
 
     let bytes = BASE64_STANDARD
@@ -135,28 +121,44 @@ pub fn generate_uuid() -> String {
     Uuid::new_v4().to_string()
 }
 
-pub fn generate_password(length: usize, include_symbols: bool) -> String {
+pub fn try_generate_password(length: usize, include_symbols: bool) -> Result<String, String> {
+    if length == 0 {
+        return Err("Password length must be at least 1".to_string());
+    }
+
     const LOWERCASE: &[u8] = b"abcdefghijklmnopqrstuvwxyz";
     const UPPERCASE: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const NUMBERS: &[u8] = b"0123456789";
     const SYMBOLS: &[u8] = b"!@#$%^&*()-_=+[]{}|;:,.<>?";
 
-    let mut pool = Vec::new();
-    pool.extend_from_slice(LOWERCASE);
-    pool.extend_from_slice(UPPERCASE);
-    pool.extend_from_slice(NUMBERS);
+    let mut categories: Vec<&[u8]> = vec![LOWERCASE, UPPERCASE, NUMBERS];
     if include_symbols {
-        pool.extend_from_slice(SYMBOLS);
+        categories.push(SYMBOLS);
+    }
+
+    let mut pool = Vec::new();
+    for cat in &categories {
+        pool.extend_from_slice(cat);
     }
 
     let mut rng = rand::thread_rng();
-    let length = length.max(6);
-    (0..length)
-        .map(|_| {
-            let idx = rng.gen_range(0..pool.len());
-            pool[idx] as char
-        })
-        .collect()
+    let mut chars = Vec::with_capacity(length);
+
+    // Guarantee at least one character from each enabled character class when length permits
+    if length >= categories.len() {
+        for cat in &categories {
+            let idx = rng.gen_range(0..cat.len());
+            chars.push(cat[idx]);
+        }
+    }
+
+    while chars.len() < length {
+        let idx = rng.gen_range(0..pool.len());
+        chars.push(pool[idx]);
+    }
+
+    chars.shuffle(&mut rng);
+    Ok(chars.into_iter().map(|b| b as char).collect())
 }
 
 #[cfg(test)]
@@ -193,6 +195,12 @@ mod tests {
     }
 
     #[test]
+    fn test_base64_multiline_whitespace() {
+        let encoded = "ZGV2\nZWxv\ncGVy";
+        assert_eq!(base64_decode(encoded).unwrap(), "developer");
+    }
+
+    #[test]
     fn test_base64_url_safe_and_unpadded() {
         // "subjects?_d=1" encoded in url-safe without padding
         let input = "c3ViamVjdHM_X2Q9MQ";
@@ -207,9 +215,20 @@ mod tests {
     }
 
     #[test]
-    fn test_password_length() {
-        let pass = generate_password(16, true);
+    fn test_password_length_and_diversity() {
+        let pass = try_generate_password(16, true).expect("valid password");
         assert_eq!(pass.len(), 16);
+        assert!(pass.chars().any(|c| c.is_ascii_lowercase()));
+        assert!(pass.chars().any(|c| c.is_ascii_uppercase()));
+        assert!(pass.chars().any(|c| c.is_ascii_digit()));
+        assert!(pass.chars().any(|c| !c.is_ascii_alphanumeric()));
+
+        let alnum = try_generate_password(12, false).expect("alnum password");
+        assert_eq!(alnum.len(), 12);
+        assert!(alnum.chars().all(|c| c.is_ascii_alphanumeric()));
+
+        assert!(try_generate_password(0, true).is_err());
+        assert_eq!(try_generate_password(4, false).unwrap().len(), 4);
     }
 
     #[test]
@@ -221,18 +240,18 @@ mod tests {
         let mut f = File::create(&test_file).expect("Create test file");
         f.write_all(content).expect("Write test file");
 
-        let sha256_res = compute_file_checksum(&test_file, ChecksumAlgorithm::Sha256)
-            .expect("SHA256 checksum");
+        let sha256_res =
+            compute_file_checksum(&test_file, ChecksumAlgorithm::Sha256).expect("SHA256 checksum");
         assert_eq!(sha256_res.digest, hash_sha256("hello"));
         assert_eq!(sha256_res.bytes_read, 5);
 
-        let sha512_res = compute_file_checksum(&test_file, ChecksumAlgorithm::Sha512)
-            .expect("SHA512 checksum");
+        let sha512_res =
+            compute_file_checksum(&test_file, ChecksumAlgorithm::Sha512).expect("SHA512 checksum");
         assert_eq!(sha512_res.digest, hash_sha512("hello"));
         assert_eq!(sha512_res.bytes_read, 5);
 
-        let md5_res = compute_file_checksum(&test_file, ChecksumAlgorithm::Md5)
-            .expect("MD5 checksum");
+        let md5_res =
+            compute_file_checksum(&test_file, ChecksumAlgorithm::Md5).expect("MD5 checksum");
         assert_eq!(md5_res.digest, hash_md5("hello"));
         assert_eq!(md5_res.bytes_read, 5);
 

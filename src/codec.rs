@@ -48,9 +48,19 @@ pub fn hex_encode(input: &[u8]) -> String {
 }
 
 pub fn hex_decode(input: &str) -> Result<Vec<u8>, String> {
-    let cleaned = input.trim();
+    let trimmed = input.trim();
+    let without_prefix = trimmed
+        .strip_prefix("0x")
+        .or_else(|| trimmed.strip_prefix("0X"))
+        .unwrap_or(trimmed);
+
+    let cleaned: String = without_prefix
+        .chars()
+        .filter(|c| !c.is_ascii_whitespace() && *c != ':')
+        .collect();
+
     if !cleaned.len().is_multiple_of(2) {
-        return Err("Hex string must have an even length".to_string());
+        return Err("Hex string must have an even number of hex digits".to_string());
     }
 
     let mut result = Vec::with_capacity(cleaned.len() / 2);
@@ -73,30 +83,50 @@ pub struct JwtInspection {
     pub header: Value,
     pub payload: Value,
     pub signature: String,
+    pub issued_at: Option<i64>,
+    pub not_before: Option<i64>,
+    pub expires_at: Option<i64>,
 }
 
 pub fn inspect_jwt(token: &str) -> Result<JwtInspection, String> {
-    let parts: Vec<&str> = token.trim().split('.').collect();
-    if parts.len() < 2 || parts.len() > 3 {
-        return Err("Invalid JWT token format: expected header.payload or header.payload.signature".to_string());
-    }
-
-    let decode_part = |part: &str| -> Result<Value, String> {
-        let decoded = crate::crypto::base64_decode(part)
-            .map_err(|e| format!("Failed to decode token component: {e}"))?;
-        serde_json::from_str(&decoded)
-            .map_err(|e| format!("Token component is not valid JSON: {e}"))
+    let trimmed = token.trim();
+    let stripped = if trimmed.len() >= 7 && trimmed[..7].eq_ignore_ascii_case("bearer ") {
+        trimmed[7..].trim()
+    } else {
+        trimmed
     };
 
-    let header = decode_part(parts[0])?;
-    let payload = decode_part(parts[1])?;
+    let parts: Vec<&str> = stripped.split('.').collect();
+    if parts.len() < 2 || parts.len() > 3 || parts[0].is_empty() || parts[1].is_empty() {
+        return Err(
+            "Invalid JWT format: expected header.payload or header.payload.signature".to_string(),
+        );
+    }
+
+    let decode_part = |name: &str, part: &str| -> Result<Value, String> {
+        let decoded = crate::crypto::base64_decode(part)
+            .map_err(|e| format!("Failed to decode JWT {name}: {e}"))?;
+        serde_json::from_str(&decoded).map_err(|e| format!("JWT {name} is not valid JSON: {e}"))
+    };
+
+    let header = decode_part("header", parts[0])?;
+    let payload = decode_part("payload", parts[1])?;
     let signature = if parts.len() == 3 {
         parts[2].to_string()
     } else {
         String::new()
     };
 
+    let extract_ts = |key: &str| -> Option<i64> {
+        payload
+            .get(key)
+            .and_then(|v| v.as_i64().or_else(|| v.as_f64().map(|f| f as i64)))
+    };
+
     Ok(JwtInspection {
+        issued_at: extract_ts("iat"),
+        not_before: extract_ts("nbf"),
+        expires_at: extract_ts("exp"),
         header,
         payload,
         signature,
@@ -144,6 +174,13 @@ mod tests {
     }
 
     #[test]
+    fn test_hex_decode_with_prefix_and_spaces() {
+        assert_eq!(hex_decode_to_string("0x4869").unwrap(), "Hi");
+        assert_eq!(hex_decode_to_string("48 69").unwrap(), "Hi");
+        assert_eq!(hex_decode_to_string("48:69").unwrap(), "Hi");
+    }
+
+    #[test]
     fn test_hex_decode_odd_length() {
         let odd = "123";
         assert!(hex_decode(odd).is_err());
@@ -167,12 +204,20 @@ mod tests {
         assert_eq!(inspection.payload["name"], "John Doe");
         assert_eq!(inspection.payload["sub"], "1234567890");
         assert_eq!(inspection.payload["iat"], 1516239022);
-        assert_eq!(inspection.signature, "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c");
+        assert_eq!(inspection.issued_at, Some(1516239022));
+        assert_eq!(
+            inspection.signature,
+            "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+        );
+
+        let with_bearer = format!("Bearer {token}");
+        let inspection2 = inspect_jwt(&with_bearer).expect("Bearer prefix should work");
+        assert_eq!(inspection2.payload["sub"], "1234567890");
     }
 
     #[test]
     fn test_inspect_jwt_invalid_format() {
-        let invalid = "only-one-part";
-        assert!(inspect_jwt(invalid).is_err());
+        assert!(inspect_jwt("only-one-part").is_err());
+        assert!(inspect_jwt(".abc").is_err());
     }
 }

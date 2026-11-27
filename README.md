@@ -13,29 +13,33 @@ Instead of installing a dozen disconnected utilities, `omnitool` bundles everyda
 
 ## Features
 
+- **Terminal UI and Interactive Mode**:
+  - Boxed terminal dashboards, visual memory/storage meters, and color-coded status badges
+  - Guided interactive mode (`omnitool` or `omnitool interactive`) with menu and command prompt
+  - Script-friendly `--raw` and `--no-color` global flags plus stdin (`-`) pipeline support across text, crypto, codec, time, QR, and JSON commands
 - **Crypto and Security**:
   - Hash computation (`SHA-256`, `SHA-512`, `MD5`)
   - File checksum verification with streaming chunk buffer (`SHA-256`, `SHA-512`, `MD5`)
-  - Base64 encoding and decoding (standard, URL-safe, unpadded)
+  - Base64 encoding and decoding (standard, URL-safe, unpadded, multiline)
   - UUIDv4 generator
-  - High-entropy secure password generation
+  - High-entropy secure password generation with character-class guarantees (`--symbols` / `--no-symbols`)
 - **Data Encoding and Codecs**:
-  - JSON Web Token (JWT) offline header and claims payload inspection
+  - JSON Web Token (JWT) offline header, claims payload, and expiration inspection (`Bearer` prefix supported)
   - URL percent-encoding and decoding (RFC 3986 with space/plus handling)
-  - Hexadecimal encoding and decoding with ASCII/UTF-8 validation
+  - Hexadecimal encoding and decoding (`0x` prefix and spaced/colon bytes supported)
   - Standard input (`-`) pipeline streaming support
 - **Time and Timestamp Telemetry**:
-  - High-precision UNIX epoch timestamps (seconds and milliseconds)
-  - ISO 8601 UTC date-time formatting and conversion
+  - High-precision UNIX epoch timestamps (seconds and milliseconds, including negative pre-1970 values)
+  - ISO 8601 UTC and timezone-offset parsing (`+HH:MM`, `-HH:MM`, `Z`)
   - Strict calendar and leap-year validation
 - **Text Analytics and Transformations**:
   - Content telemetry (line count, word count, character count, byte size)
   - URL-friendly slug generation (`slugify`)
-  - String and grapheme reversal
-  - Case formatting converters (snake_case, camelCase, kebab-case, Title Case, UPPER_CASE, lower case)
+  - Combining-mark-aware text reversal
+  - Case formatting converters (`snake_case`, `camelCase`, `kebab-case`, `Title Case`, `UPPER_CASE`, `lower case`) with acronym boundary support
   - Full support for files and standard input (`-`)
 - **Terminal QR Code**:
-  - Instant ASCII/UTF-8 scannable QR generation for links, text, and keys
+  - Compact half-block high-contrast scannable terminal QR rendering (with `--full`, `--invert`, `--plain`, `--ec`, `--svg`, and `--no-universal-links`)
 - **Data and JSON Tools**:
   - Pretty formatting with syntax verification
   - JSON minification
@@ -97,8 +101,9 @@ omnitool crypto b64-decode "ZGV2ZWxvcGVyLXRva2VuLTEyMw=="
 # Generate UUIDv4
 omnitool crypto uuid
 
-# Generate a 24-character high-entropy password
+# Generate a 24-character high-entropy password (or alphanumeric only with --no-symbols)
 omnitool crypto pass --length 24 --symbols
+omnitool crypto pass --length 24 --no-symbols
 ```
 
 ### 4. URL and Hex Encoders
@@ -153,8 +158,11 @@ omnitool text reverse "Developer Toolkit"
 
 ### 7. Terminal QR Codes
 ```bash
-# Generate scannable QR in terminal
+# Generate high-contrast compact scannable QR in terminal
 omnitool qr "https://github.com/pranov888/omnitool"
+
+# Export to SVG and append #no_universal_links for iOS Safari browser handoff
+omnitool qr "https://claude.ai/share/..." --no-universal-links --svg share.svg
 ```
 
 ### 8. JSON Formatting and Validation

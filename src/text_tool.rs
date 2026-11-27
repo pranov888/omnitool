@@ -35,28 +35,30 @@ pub enum CaseStyle {
 }
 
 pub fn convert_case(input: &str, style: CaseStyle) -> String {
-    // Split on spaces, underscores, hyphens, and camelCase boundaries
+    // Split on whitespace, underscores, hyphens, and camelCase / acronym boundaries
+    let chars: Vec<char> = input.chars().collect();
     let mut words = Vec::new();
     let mut current_word = String::new();
 
-    let mut prev_is_lower = false;
-    for ch in input.chars() {
-        if ch == ' ' || ch == '_' || ch == '-' {
+    for (i, &ch) in chars.iter().enumerate() {
+        if ch.is_whitespace() || ch == '_' || ch == '-' {
             if !current_word.is_empty() {
                 words.push(current_word.to_lowercase());
-                current_word = String::new();
+                current_word.clear();
             }
-            prev_is_lower = false;
         } else if ch.is_uppercase() {
-            if prev_is_lower && !current_word.is_empty() {
-                words.push(current_word.to_lowercase());
-                current_word = String::new();
+            if !current_word.is_empty() {
+                let prev = chars[i - 1];
+                let prev_is_boundary = prev.is_lowercase() || prev.is_ascii_digit();
+                let next_is_lower = chars.get(i + 1).is_some_and(|n| n.is_lowercase());
+                if prev_is_boundary || (prev.is_uppercase() && next_is_lower) {
+                    words.push(current_word.to_lowercase());
+                    current_word.clear();
+                }
             }
             current_word.push(ch);
-            prev_is_lower = false;
         } else {
             current_word.push(ch);
-            prev_is_lower = true;
         }
     }
 
@@ -123,8 +125,50 @@ pub fn slugify(input: &str) -> String {
     slug
 }
 
+fn is_combining_mark(ch: char) -> bool {
+    let cp = ch as u32;
+    matches!(
+        cp,
+        0x0300..=0x036F
+            | 0x1AB0..=0x1AFF
+            | 0x1DC0..=0x1DFF
+            | 0x20D0..=0x20FF
+            | 0xFE00..=0xFE0F
+            | 0xFE20..=0xFE2F
+    )
+}
+
 pub fn reverse_text(input: &str) -> String {
-    input.chars().rev().collect()
+    let mut clusters: Vec<String> = Vec::new();
+    let mut join_next = false;
+
+    for ch in input.chars() {
+        if join_next {
+            if let Some(last) = clusters.last_mut() {
+                last.push(ch);
+            } else {
+                clusters.push(ch.to_string());
+            }
+            join_next = false;
+        } else if ch == '\u{200D}' {
+            if let Some(last) = clusters.last_mut() {
+                last.push(ch);
+                join_next = true;
+            } else {
+                clusters.push(ch.to_string());
+            }
+        } else if is_combining_mark(ch) {
+            if let Some(last) = clusters.last_mut() {
+                last.push(ch);
+            } else {
+                clusters.push(ch.to_string());
+            }
+        } else {
+            clusters.push(ch.to_string());
+        }
+    }
+
+    clusters.into_iter().rev().collect()
 }
 
 #[cfg(test)]
@@ -157,6 +201,15 @@ mod tests {
             convert_case("kebab-case-text", CaseStyle::Snake),
             "kebab_case_text"
         );
+        assert_eq!(convert_case("HTTPServer", CaseStyle::Snake), "http_server");
+        assert_eq!(
+            convert_case("parseJSONData", CaseStyle::Snake),
+            "parse_json_data"
+        );
+        assert_eq!(
+            convert_case("hello\nworld\tcli", CaseStyle::Snake),
+            "hello_world_cli"
+        );
     }
 
     #[test]
@@ -170,6 +223,7 @@ mod tests {
             convert_case("hello_world_text", CaseStyle::Camel),
             "helloWorldText"
         );
+        assert_eq!(convert_case("HTTPServer", CaseStyle::Camel), "httpServer");
     }
 
     #[test]
@@ -179,8 +233,14 @@ mod tests {
 
     #[test]
     fn test_convert_case_title() {
-        assert_eq!(convert_case("hello_world_text", CaseStyle::Title), "Hello World Text");
-        assert_eq!(convert_case("kebab-case-slug", CaseStyle::Title), "Kebab Case Slug");
+        assert_eq!(
+            convert_case("hello_world_text", CaseStyle::Title),
+            "Hello World Text"
+        );
+        assert_eq!(
+            convert_case("kebab-case-slug", CaseStyle::Title),
+            "Kebab Case Slug"
+        );
     }
 
     #[test]
@@ -189,7 +249,10 @@ mod tests {
             slugify("Hello, World! This is Rust in 2026."),
             "hello-world-this-is-rust-in-2026"
         );
-        assert_eq!(slugify("   --Complex String & Symbols--   "), "complex-string-symbols");
+        assert_eq!(
+            slugify("   --Complex String & Symbols--   "),
+            "complex-string-symbols"
+        );
         assert_eq!(slugify("already-a-slug"), "already-a-slug");
         assert_eq!(slugify(""), "");
     }
@@ -199,5 +262,6 @@ mod tests {
         assert_eq!(reverse_text("hello"), "olleh");
         assert_eq!(reverse_text("Rust 2026"), "6202 tsuR");
         assert_eq!(reverse_text(""), "");
+        assert_eq!(reverse_text("cafe\u{0301}"), "e\u{0301}fac");
     }
 }
